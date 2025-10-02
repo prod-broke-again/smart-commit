@@ -47,6 +47,7 @@ export interface GlobalConfig {
   readonly temperature: number;
   readonly language: string;
   readonly useWalletBalance: boolean;
+  readonly analysisMode: 'lite' | 'full';
   readonly [key: string]: unknown;
 }
 

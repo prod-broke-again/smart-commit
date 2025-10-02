@@ -48,6 +48,9 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
       // Get staged changes
       const stagedChanges = await this.gitAnalyzer.getStagedChanges();
 
+      // Get diff if full analysis mode is enabled
+      const diff = config.analysisMode === 'full' ? await this.gitAnalyzer.getStagedDiff() : undefined;
+
       // Generate commit message
       const generationOptions: CommitGenerationOptions = {
         model: config.aiModel,
@@ -55,10 +58,12 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
         maxLength: config.maxCommitLength,
         includeScope: config.includeScope,
         customInstructions: config.customInstructions,
+        analysisMode: config.analysisMode,
       };
 
       const commitMessage = await this.commitGenerator.generateCommitMessage(
         stagedChanges,
+        diff,
         generationOptions
       );
 
@@ -111,6 +116,9 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
       // Get merged configuration
       const config = await this.configManager.getMergedConfig();
 
+      // Get diff if full analysis mode is enabled
+      const diff = config.analysisMode === 'full' ? await this.gitAnalyzer.getStagedDiff() : undefined;
+
       // Generate commit message
       const generationOptions: CommitGenerationOptions = {
         model: config.aiModel,
@@ -118,10 +126,12 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
         maxLength: config.maxCommitLength,
         includeScope: config.includeScope,
         customInstructions: config.customInstructions,
+        analysisMode: config.analysisMode,
       };
 
       const commitMessage = await this.commitGenerator.generateCommitMessage(
         changesToAnalyze,
+        diff,
         generationOptions
       );
 
@@ -173,6 +183,9 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
       // Get merged configuration
       const config = await this.configManager.getMergedConfig();
 
+      // Get diff if full analysis mode is enabled
+      const diff = config.analysisMode === 'full' ? await this.gitAnalyzer.getStagedDiff() : undefined;
+
       // Generate commit message
       const generationOptions: CommitGenerationOptions = {
         model: config.aiModel,
@@ -180,10 +193,12 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
         maxLength: config.maxCommitLength,
         includeScope: config.includeScope,
         customInstructions: config.customInstructions,
+        analysisMode: config.analysisMode,
       };
 
       const commitMessage = await this.commitGenerator.generateCommitMessage(
         changesToAnalyze,
+        diff,
         generationOptions
       );
 

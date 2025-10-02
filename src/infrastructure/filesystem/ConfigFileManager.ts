@@ -28,12 +28,13 @@ export class ConfigFileManager implements IConfigurationManager {
   public async getGlobalConfig(): Promise<GlobalConfig> {
     const defaultConfig: GlobalConfig = {
       apiKey: null,
-      defaultModel: 'gpt-3.5-turbo',
+      defaultModel: 'gpt-5-nano',
       defaultProvider: 'gptunnel',
       maxTokens: 1000,
       temperature: 0.7,
       language: 'en',
       useWalletBalance: true,
+      analysisMode: 'lite',
     };
 
     try {
@@ -145,6 +146,13 @@ export class ConfigFileManager implements IConfigurationManager {
     if (cfg['temperature'] !== undefined) {
       if (typeof cfg['temperature'] !== 'number' || cfg['temperature'] < 0 || cfg['temperature'] > 2) {
         errors.push('Temperature must be a number between 0 and 2');
+      }
+    }
+
+    // Validate analysis mode
+    if (cfg['analysisMode'] !== undefined) {
+      if (typeof cfg['analysisMode'] !== 'string' || !['lite', 'full'].includes(cfg['analysisMode'])) {
+        errors.push('Analysis mode must be either "lite" or "full"');
       }
     }
 

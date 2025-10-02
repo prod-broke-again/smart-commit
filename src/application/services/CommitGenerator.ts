@@ -18,6 +18,7 @@ export class CommitGenerator implements ICommitGenerator {
 
   public async generateCommitMessage(
     changes: readonly GitChange[],
+    diff?: string,
     options: CommitGenerationOptions = {}
   ): Promise<CommitMessage> {
     if (changes.length === 0) {
@@ -32,10 +33,17 @@ export class CommitGenerator implements ICommitGenerator {
     const commitType = CommitType.determineFromChanges(changes);
 
     // Generate description using AI with appropriate token limits
-    const prompt = this.buildCommitPrompt(changes, commitType, language, options);
+    const prompt = this.buildCommitPrompt(changes, diff, commitType, language, options);
 
-    // Use higher token limits for GPT-5 models (like in original script)
-    const maxTokens = model.name.startsWith('gpt-5') ? 120000 : 100;
+    // Use appropriate token limits for different models
+    let maxTokens: number;
+    if (model.name === 'gpt-5-nano') {
+      maxTokens = 128000; // gpt-5-nano supports max 128k completion tokens
+    } else if (model.name.startsWith('gpt-5')) {
+      maxTokens = 120000; // Other GPT-5 models
+    } else {
+      maxTokens = 100; // GPT-4 and other models
+    }
 
     const description = await this.aiAssistant.generateText(prompt, {
       model,
@@ -110,17 +118,34 @@ Write in ${language} and make it suitable for changelog.`;
 
   private buildCommitPrompt(
     changes: readonly GitChange[],
+    diff: string | undefined,
     commitType: CommitType,
     language: string,
     options: CommitGenerationOptions
   ): string {
     const changesSummary = this.summarizeChanges(changes);
     const customInstructions = options.customInstructions || '';
+    const analysisMode = options.analysisMode || 'lite';
+
+    let changesDescription = '';
+
+    if (analysisMode === 'full' && diff && diff.trim()) {
+      // Full analysis mode: include actual diff changes
+      const truncatedDiff = diff.length > 5000 ? diff.substring(0, 5000) + '\n... (diff truncated)' : diff;
+      changesDescription = `Files changed:
+${changesSummary}
+
+Diff of changes:
+${truncatedDiff}`;
+    } else {
+      // Lite analysis mode: only file list
+      changesDescription = `Files changed:
+${changesSummary}`;
+    }
 
     return `Generate a concise commit message description for ${commitType.value} type changes.
 
-Changes:
-${changesSummary}
+${changesDescription}
 
 Requirements:
 - Write in ${language}

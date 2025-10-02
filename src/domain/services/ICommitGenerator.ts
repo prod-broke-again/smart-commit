@@ -7,10 +7,11 @@ import { AiModel } from '../entities/AiModel';
  */
 export interface ICommitGenerator {
   /**
-   * Generates a commit message based on git changes
+   * Generates a commit message based on git changes and diff
    */
   generateCommitMessage(
     changes: readonly GitChange[],
+    diff?: string,
     options?: CommitGenerationOptions
   ): Promise<CommitMessage>;
 
@@ -42,6 +43,7 @@ export interface CommitGenerationOptions {
   readonly maxLength?: number;
   readonly includeScope?: boolean;
   readonly customInstructions?: string | null;
+  readonly analysisMode?: 'lite' | 'full';
 }
 
 /**
