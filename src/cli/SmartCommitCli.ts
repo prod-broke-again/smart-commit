@@ -13,15 +13,24 @@ export class SmartCommitCli {
 
   constructor() {
     this.container = Container.getInstance();
-    this.container.initialize();
-    this.workflowOrchestrator = this.container.workflowOrchestrator;
-    this.configManager = this.container.configManager;
+  }
+
+  /**
+   * Initializes the CLI
+   */
+  private async initialize(): Promise<void> {
+    if (!this.workflowOrchestrator) {
+      await this.container.initialize();
+      this.workflowOrchestrator = this.container.workflowOrchestrator;
+      this.configManager = this.container.configManager;
+    }
   }
 
   /**
    * Run standard commit workflow
    */
   public async runStandard(options: WorkflowOptions = {}): Promise<void> {
+    await this.initialize();
     await this.workflowOrchestrator.runStandardWorkflow(options);
   }
 
@@ -29,6 +38,7 @@ export class SmartCommitCli {
    * Run dry-run workflow
    */
   public async runDryRun(): Promise<void> {
+    await this.initialize();
     await this.workflowOrchestrator.runDryRunWorkflow();
   }
 
@@ -36,6 +46,7 @@ export class SmartCommitCli {
    * Run generate-only workflow
    */
   public async runGenerateOnly(): Promise<void> {
+    await this.initialize();
     const message = await this.workflowOrchestrator.runGenerateOnlyWorkflow();
     console.log(message);
   }
@@ -44,6 +55,7 @@ export class SmartCommitCli {
    * Run workflow with custom message
    */
   public async runWithCustomMessage(message: string, options: WorkflowOptions = {}): Promise<void> {
+    await this.initialize();
     await this.workflowOrchestrator.runCustomMessageWorkflow(message, options);
   }
 
@@ -51,6 +63,7 @@ export class SmartCommitCli {
    * Set configuration value
    */
   public async setConfig(key: string, value: string, global: boolean = false): Promise<void> {
+    await this.initialize();
     const parsedValue = this.parseConfigValue(value);
 
     if (global) {
@@ -68,6 +81,7 @@ export class SmartCommitCli {
    * Get configuration value
    */
   public async getConfig(key: string, global: boolean = false): Promise<unknown> {
+    await this.initialize();
     if (global) {
       const config = await this.configManager.getGlobalConfig();
       return (config as any)[key];
@@ -81,6 +95,7 @@ export class SmartCommitCli {
    * List all configuration
    */
   public async listConfig(global: boolean = false): Promise<void> {
+    await this.initialize();
     if (global) {
       const config = await this.configManager.getGlobalConfig();
       console.log(chalk.blue('Global configuration:'));
@@ -96,6 +111,7 @@ export class SmartCommitCli {
    * Run initial setup
    */
   public async runSetup(): Promise<void> {
+    await this.initialize();
     console.log(chalk.blue('🚀 Smart Commit Tool Setup'));
     console.log();
 

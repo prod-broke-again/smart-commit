@@ -46,6 +46,7 @@ export interface GlobalConfig {
   readonly maxTokens: number;
   readonly temperature: number;
   readonly language: string;
+  readonly useWalletBalance: boolean;
   readonly [key: string]: unknown;
 }
 

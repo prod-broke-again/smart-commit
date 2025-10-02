@@ -9,8 +9,10 @@ import { IAiAssistant, AiGenerationOptions, ModelCapabilities } from '../../doma
 export class GptunnelApiClient implements IAiAssistant {
   private readonly httpClient: AxiosInstance;
   private readonly baseURL = 'https://gptunnel.ru/v1';
+  private useWalletBalance: boolean;
 
-  constructor() {
+  constructor(useWalletBalance: boolean = true) {
+    this.useWalletBalance = useWalletBalance;
     this.httpClient = axios.create({
       baseURL: this.baseURL,
       timeout: 30000, // 30 seconds
@@ -25,7 +27,7 @@ export class GptunnelApiClient implements IAiAssistant {
     const maxTokens = options.maxTokens || Math.min(1000, model.maxTokens - this.estimateTokens(prompt) - 100);
     const temperature = options.temperature ?? model.temperature;
 
-    const requestBody = {
+    const requestBody: any = {
       model: model.name,
       messages: [
         {
@@ -37,6 +39,11 @@ export class GptunnelApiClient implements IAiAssistant {
       temperature,
       stop: options.stopSequences,
     };
+
+    // Add useWalletBalance for individual users (not companies)
+    if (this.useWalletBalance) {
+      requestBody.useWalletBalance = true;
+    }
 
     try {
       const response = await this.httpClient.post('/chat/completions', requestBody);
@@ -121,5 +128,19 @@ export class GptunnelApiClient implements IAiAssistant {
    */
   public clearCredentials(): void {
     delete this.httpClient.defaults.headers.common['Authorization'];
+  }
+
+  /**
+   * Sets whether to use wallet balance for payments
+   */
+  public setUseWalletBalance(useWalletBalance: boolean): void {
+    this.useWalletBalance = useWalletBalance;
+  }
+
+  /**
+   * Gets current wallet balance setting
+   */
+  public getUseWalletBalance(): boolean {
+    return this.useWalletBalance;
   }
 }

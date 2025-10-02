@@ -33,6 +33,7 @@ export class ConfigFileManager implements IConfigurationManager {
       maxTokens: 1000,
       temperature: 0.7,
       language: 'en',
+      useWalletBalance: true,
     };
 
     try {
@@ -174,7 +175,7 @@ export class ConfigFileManager implements IConfigurationManager {
     }
 
     // Validate boolean flags
-    const booleanFields = ['includeScope', 'conventionalCommitsOnly'];
+    const booleanFields = ['includeScope', 'conventionalCommitsOnly', 'useWalletBalance'];
     for (const field of booleanFields) {
       if (cfg[field] !== undefined && typeof cfg[field] !== 'boolean') {
         errors.push(`${field} must be a boolean`);

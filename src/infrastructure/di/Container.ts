@@ -54,11 +54,14 @@ export class Container {
   /**
    * Initializes all services
    */
-  public initialize(): void {
+  public async initialize(): Promise<void> {
     // Infrastructure services
     const gitAnalyzer = new GitOperations();
-    const aiAssistant = new GptunnelApiClient();
     const configManager = new ConfigFileManager();
+
+    // Get global config to determine wallet balance setting
+    const globalConfig = await configManager.getGlobalConfig();
+    const aiAssistant = new GptunnelApiClient(globalConfig.useWalletBalance);
 
     this.registerSingleton<IGitAnalyzer>('IGitAnalyzer', gitAnalyzer);
     this.registerSingleton<IAiAssistant>('IAiAssistant', aiAssistant);
