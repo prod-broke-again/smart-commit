@@ -24,8 +24,10 @@ export class GptunnelApiClient implements IAiAssistant {
 
   public async generateText(prompt: string, options: AiGenerationOptions = {}): Promise<string> {
     const model = options.model || AiModel.GPT_3_5_TURBO;
-    const maxTokens = options.maxTokens || Math.min(1000, model.maxTokens - this.estimateTokens(prompt) - 100);
-    const temperature = options.temperature ?? model.temperature;
+    const maxTokens = options.maxTokens || Math.min(500, model.maxTokens - this.estimateTokens(prompt) - 100);
+
+    // GPT-5 models only support temperature = 1 (default)
+    const temperature = model.name.startsWith('gpt-5') ? 1 : (options.temperature ?? model.temperature);
 
     const requestBody: any = {
       model: model.name,
@@ -35,10 +37,24 @@ export class GptunnelApiClient implements IAiAssistant {
           content: prompt,
         },
       ],
-      max_tokens: maxTokens,
-      temperature,
       stop: options.stopSequences,
     };
+
+    // Add temperature only if it's not the default value or for non-GPT-5 models
+    if (model.name.startsWith('gpt-5')) {
+      // GPT-5 models use default temperature (1), don't specify it
+    } else {
+      requestBody.temperature = temperature;
+    }
+
+    // Different models use different parameter names for max tokens
+    if (model.name.startsWith('gpt-5')) {
+      // GPT-5 models use max_completion_tokens - use reasonable limit for commit messages
+      requestBody.max_completion_tokens = Math.min(maxTokens, 500);
+    } else {
+      // GPT-4 and other models use max_tokens
+      requestBody.max_tokens = maxTokens;
+    }
 
     // Add useWalletBalance for individual users (not companies)
     if (this.useWalletBalance) {
@@ -46,16 +62,37 @@ export class GptunnelApiClient implements IAiAssistant {
     }
 
     try {
+      console.log('Sending request to GPTunnel API:');
+      console.log('Model:', model.name);
+      console.log('Prompt length:', prompt.length, 'characters');
+      console.log('Estimated tokens:', this.estimateTokens(prompt));
+      console.log('Request body:', JSON.stringify(requestBody, null, 2));
+
       const response = await this.httpClient.post('/chat/completions', requestBody);
 
       const choice = response.data.choices?.[0];
-      if (!choice?.message?.content) {
+      if (!choice?.message) {
         throw new Error('Invalid response format from GPTunnel API');
       }
 
-      return choice.message.content.trim();
+      // Handle empty content (can happen with very short responses)
+      const content = choice.message.content || '';
+      if (content.trim().length === 0 && choice.finish_reason === 'length') {
+        throw new Error('Response was truncated due to max_completion_tokens limit. Try increasing the limit.');
+      }
+
+      return content.trim();
     } catch (error) {
       if (axios.isAxiosError(error)) {
+        console.error('GPTunnel API Error Details:');
+        console.error('Status:', error.response?.status);
+        console.error('Status Text:', error.response?.statusText);
+        console.error('Headers:', error.response?.headers);
+        console.error('Data:', JSON.stringify(error.response?.data, null, 2));
+        console.error('Request Body:', JSON.stringify(requestBody, null, 2));
+        console.error('Prompt length:', prompt.length);
+        console.error('Estimated tokens:', this.estimateTokens(prompt));
+
         if (error.response?.status === 401) {
           throw new Error('Invalid API key');
         }
@@ -63,7 +100,9 @@ export class GptunnelApiClient implements IAiAssistant {
           throw new Error('Rate limit exceeded. Please try again later.');
         }
         if (error.response?.status === 400) {
-          throw new Error('Invalid request parameters');
+          const errorMessage = error.response?.data?.error?.message || 'Invalid request parameters';
+          const fullError = `Invalid request parameters: ${errorMessage}`;
+          throw new Error(fullError);
         }
         throw new Error(`GPTunnel API error: ${error.response?.data?.error?.message || error.message}`);
       }
@@ -85,6 +124,7 @@ export class GptunnelApiClient implements IAiAssistant {
         model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: 'test' }],
         max_tokens: 1,
+        useWalletBalance: this.useWalletBalance,
       });
       return true;
     } catch (error) {

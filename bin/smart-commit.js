@@ -74,10 +74,11 @@ program
   .addCommand(
     new (require('commander').Command)('list')
       .description('List available models')
-      .action(async () => {
+      .option('--all', 'Show all models (default: first 15)')
+      .action(async (options) => {
         try {
           const cli = new SmartCommitCli();
-          await cli.listModels();
+          await cli.listModels(options.all);
         } catch (error) {
           console.error('Error:', error.message);
           process.exit(1);

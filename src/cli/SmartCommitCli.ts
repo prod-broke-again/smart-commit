@@ -146,7 +146,7 @@ export class SmartCommitCli {
   /**
    * List available models
    */
-  public async listModels(): Promise<void> {
+  public async listModels(showAll: boolean = false): Promise<void> {
     await this.initialize();
 
     // Wait for models to load (with timeout)
@@ -158,15 +158,23 @@ export class SmartCommitCli {
     });
 
     const models = AiModel.getAvailableModels();
+    const currentConfig = await this.configManager.getMergedConfig();
+
     console.log(chalk.blue(`Available models: ${models.length}`));
 
-    for (const model of models.slice(0, 10)) {
-      const marker = model.name === 'gpt-4o-mini' ? '★' : ' ';
-      console.log(`${marker} ${chalk.cyan(model.name)} (${model.maxTokens} tokens)`);
+    const displayLimit = showAll ? models.length : 15;
+    const displayModels = models.slice(0, displayLimit);
+
+    for (const model of displayModels) {
+      const isCurrent = model.name === currentConfig.aiModel.name;
+      const marker = isCurrent ? '★' : ' ';
+      const modelInfo = `${marker} ${chalk.cyan(model.name)} (${model.maxTokens} tokens)`;
+      console.log(isCurrent ? chalk.green(modelInfo) : modelInfo);
     }
 
-    if (models.length > 10) {
-      console.log(chalk.gray(`  ... and ${models.length - 10} more`));
+    if (models.length > displayLimit) {
+      console.log(chalk.gray(`  ... and ${models.length - displayLimit} more`));
+      console.log(chalk.gray(`Use --all to show all models`));
     }
 
     const currentModels = this.modelManager.getCurrentModels();
@@ -175,6 +183,8 @@ export class SmartCommitCli {
     } else {
       console.log(chalk.yellow('\nUsing fallback models (API not loaded)'));
     }
+
+    console.log(chalk.gray(`\nCurrent model: ${currentConfig.aiModel.name}`));
   }
 
   /**

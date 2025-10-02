@@ -75,8 +75,13 @@ export class ConfigFileManager implements IConfigurationManager {
       ? ApiCredentials.create(merged.apiKey, merged.defaultProvider)
       : null;
 
-    // Get AI model
-    const aiModel = AiModel.findByName(merged.defaultModel) || AiModel.GPT_3_5_TURBO;
+    // Get AI model - try to find it, if not found, create a basic model for this provider
+    let aiModel = AiModel.findByName(merged.defaultModel);
+    if (!aiModel) {
+      // If model not found, create a basic model with default parameters
+      // This allows using models that aren't in the static list or API cache
+      aiModel = AiModel.create(merged.defaultModel, merged.defaultProvider, 400000, 0.7);
+    }
 
     return {
       ...merged,
@@ -118,9 +123,8 @@ export class ConfigFileManager implements IConfigurationManager {
     if (cfg['defaultModel'] !== undefined) {
       if (typeof cfg['defaultModel'] !== 'string') {
         errors.push('Default model must be a string');
-      } else if (!AiModel.findByName(cfg['defaultModel'])) {
-        errors.push(`Unknown model: ${cfg['defaultModel']}`);
       }
+      // Note: We don't validate if model exists since models can be loaded dynamically from API
     }
 
     // Validate provider
