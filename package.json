@@ -1,0 +1,71 @@
+{
+  "name": "smart-commit",
+  "version": "1.0.0",
+  "description": "Smart Commit Tool - глобальный инструмент для генерации осмысленных сообщений коммитов с использованием ИИ",
+  "main": "lib/index.js",
+  "bin": {
+    "smart-commit": "bin/smart-commit.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "prepare": "husky install",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "ai",
+    "gpt",
+    "conventional-commits",
+    "cli",
+    "tool"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/smart-commit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/smart-commit/issues"
+  },
+  "homepage": "https://github.com/your-username/smart-commit#readme",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "commander": "^11.1.0",
+    "fs-extra": "^11.1.1",
+    "chalk": "^5.3.0",
+    "ora": "^7.0.1",
+    "joi": "^17.9.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/fs-extra": "^11.0.1",
+    "@types/jest": "^29.5.5",
+    "@typescript-eslint/eslint-plugin": "^6.7.5",
+    "@typescript-eslint/parser": "^6.7.5",
+    "eslint": "^8.51.0",
+    "husky": "^8.0.3",
+    "jest": "^29.7.0",
+    "lint-staged": "^14.0.1",
+    "prettier": "^3.0.3",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.2.2"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}

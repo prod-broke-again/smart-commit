@@ -1,0 +1,38 @@
+# Source code
+src/
+tests/
+*.test.ts
+*.spec.ts
+
+# Development files
+.git/
+.github/
+.husky/
+.prettierrc.js
+.eslintrc.js
+jest.config.js
+tsconfig.json
+
+# Documentation for development
+tz.md
+
+# Build artifacts (keep lib/)
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
