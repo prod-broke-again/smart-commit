@@ -35,14 +35,16 @@ export class CommitGenerator implements ICommitGenerator {
     // Generate description using AI with appropriate token limits
     const prompt = this.buildCommitPrompt(changes, diff, commitType, language, options);
 
-    // Use appropriate token limits for different models
+    // Use appropriate token limits for different models and analysis modes
     let maxTokens: number;
+    const isFullMode = options.analysisMode === 'full';
+
     if (model.name === 'gpt-5-nano') {
-      maxTokens = 128000; // gpt-5-nano supports max 128k completion tokens
+      maxTokens = isFullMode ? 128000 : 128000; // gpt-5-nano supports max 128k completion tokens
     } else if (model.name.startsWith('gpt-5')) {
-      maxTokens = 120000; // Other GPT-5 models
+      maxTokens = isFullMode ? 120000 : 120000; // Other GPT-5 models
     } else {
-      maxTokens = 100; // GPT-4 and other models
+      maxTokens = isFullMode ? 500 : 100; // GPT-4 and other models
     }
 
     const description = await this.aiAssistant.generateText(prompt, {
@@ -52,8 +54,9 @@ export class CommitGenerator implements ICommitGenerator {
       customInstructions: options.customInstructions ?? undefined,
     });
 
-    // Clean and truncate description
-    const cleanDescription = this.cleanDescription(description, maxLength);
+    // Clean and truncate description (allow longer descriptions for full mode)
+    const descriptionMaxLength = options.analysisMode === 'full' ? Math.max(maxLength, 1000) : maxLength;
+    const cleanDescription = this.cleanDescription(description, descriptionMaxLength);
 
     // Determine scope if needed
     const scope = options.includeScope ? this.determineScope(changes) : null;
@@ -130,10 +133,15 @@ Write in ${language} and make it suitable for changelog.`;
     let changesDescription = '';
 
     if (analysisMode === 'full' && diff && diff.trim()) {
-      // Full analysis mode: include actual diff changes
-      const truncatedDiff = diff.length > 5000 ? diff.substring(0, 5000) + '\n... (diff truncated)' : diff;
+      // Full analysis mode: detailed code analysis
+      const codeAnalysis = this.analyzeCodeChanges(diff, changes);
+      const truncatedDiff = diff.length > 8000 ? diff.substring(0, 8000) + '\n... (diff truncated)' : diff;
+
       changesDescription = `Files changed:
 ${changesSummary}
+
+Code Analysis:
+${codeAnalysis}
 
 Diff of changes:
 ${truncatedDiff}`;
@@ -143,7 +151,32 @@ ${truncatedDiff}`;
 ${changesSummary}`;
     }
 
-    return `Generate a concise commit message description for ${commitType.value} type changes.
+    if (analysisMode === 'full') {
+      return `Analyze the following code changes and generate a detailed conventional commit message.
+
+${changesDescription}
+
+Requirements:
+- Write in ${language} with detailed bullet points
+- Use appropriate emojis for different types of changes
+- Group changes by logical components (backend, frontend, database, etc.)
+- Focus on WHAT was added/changed, not HOW
+- Analyze added classes, interfaces, functions, components, database tables, API endpoints
+- Be specific about new features, entities, DTOs, repositories, migrations
+- Start with imperative mood in the main description
+- Keep main description under 70 characters, but be detailed in bullet points
+- Use format like: "- 🧠 Added domain entities: GameSession, GameCase, GameClue"
+${customInstructions ? `\nAdditional instructions: ${customInstructions}` : ''}
+
+Example format:
+feat: implemented basic AI game with sessions and cases 🚀
+- 🧠 Added domain entities and VOs: GameSession, GameCase, GameClue, GameAnswer, SessionId, UserId, GameStatus
+- 🔧 Implemented DTOs: CreateGameSessionRequest, GameActionRequest, GameSessionResponse
+- 🚀 Engine and contracts: added GameEngineInterface and GameEngine for session management
+
+Main description:`;
+    } else {
+      return `Generate a concise commit message description for ${commitType.value} type changes.
 
 ${changesDescription}
 
@@ -156,6 +189,66 @@ Requirements:
 ${customInstructions ? `\nAdditional instructions: ${customInstructions}` : ''}
 
 Description:`;
+    }
+  }
+
+  private analyzeCodeChanges(diff: string, changes: readonly GitChange[]): string {
+    const analysis: string[] = [];
+
+    // Extract added classes, interfaces, functions
+    const classMatches = diff.match(/^\+.*(?:class|interface|abstract class)\s+(\w+)/gm);
+    const functionMatches = diff.match(/^\+.*(?:function|const|let|var)\s+(\w+)\s*[=(]/gm);
+    const componentMatches = diff.match(/^\+.*(?:Vue\.component|export.*Component|class.*Component)/gm);
+    const migrationMatches = diff.match(/^\+.*create_(\w+)_table/gm);
+    const routeMatches = diff.match(/^\+.*Route::(?:get|post|put|delete|patch)/gm);
+
+    // Group changes by type
+    const addedClasses = classMatches ? [...new Set(classMatches.map(m => m.replace(/^\+.*(?:class|interface|abstract class)\s+/, '')))] : [];
+    const addedFunctions = functionMatches ? [...new Set(functionMatches.map(m => m.replace(/^\+.*(?:function|const|let|var)\s+/, '').replace(/\s*[=(].*/, '')))] : [];
+    const addedComponents = componentMatches ? componentMatches.length : 0;
+    const addedMigrations = migrationMatches ? migrationMatches.map(m => m.replace(/^\+.*create_/, '').replace(/_table.*/, '')) : [];
+    const addedRoutes = routeMatches ? routeMatches.length : 0;
+
+    // Analyze file types
+    const fileTypes = changes.reduce((acc, change) => {
+      const ext = change.filePath.split('.').pop()?.toLowerCase();
+      if (ext) {
+        acc[ext] = (acc[ext] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Backend analysis
+    if (addedClasses.length > 0) {
+      analysis.push(`Added classes/interfaces: ${addedClasses.slice(0, 5).join(', ')}${addedClasses.length > 5 ? '...' : ''}`);
+    }
+
+    if (addedFunctions.length > 0) {
+      analysis.push(`Added functions/methods: ${addedFunctions.slice(0, 3).join(', ')}${addedFunctions.length > 3 ? '...' : ''}`);
+    }
+
+    // Database analysis
+    if (addedMigrations.length > 0) {
+      analysis.push(`Database migrations: ${addedMigrations.join(', ')}`);
+    }
+
+    // Frontend analysis
+    if (addedComponents > 0) {
+      analysis.push(`Vue components: ${addedComponents} component(s) added`);
+    }
+
+    // API analysis
+    if (addedRoutes > 0) {
+      analysis.push(`API routes: ${addedRoutes} route(s) added`);
+    }
+
+    // File statistics
+    const stats = Object.entries(fileTypes).map(([ext, count]) => `${ext}: ${count}`).join(', ');
+    if (stats) {
+      analysis.push(`File types changed: ${stats}`);
+    }
+
+    return analysis.length > 0 ? analysis.join('\n') : 'Code changes detected (detailed analysis in diff)';
   }
 
   private summarizeChanges(changes: readonly GitChange[]): string {
