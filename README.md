@@ -7,6 +7,23 @@
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/prod-broke-again/smart-commit)
 
+## 🌍 Доступные языки
+
+- 🇷🇺 **Русский** (текущий)
+- 🇺🇸 [**English**](README.en.md)
+- 🇨🇳 [中文 (Chinese)](README.cn.md) - *скоро*
+- 🇪🇸 [Español (Spanish)](README.es.md) - *скоро*
+- 🇩🇪 [Deutsch (German)](README.de.md) - *скоро*
+
+**Хотите добавить перевод?** [Создайте Pull Request](https://github.com/prod-broke-again/smart-commit/pulls) или [откройте Issue](https://github.com/prod-broke-again/smart-commit/issues)!
+
+## 🔗 Ссылки
+
+- 📖 [Документация](https://github.com/prod-broke-again/smart-commit#readme)
+- 🐛 [Сообщить об ошибке](https://github.com/prod-broke-again/smart-commit/issues)
+- 💡 [Предложить функционал](https://github.com/prod-broke-again/smart-commit/discussions)
+- 🤝 [Contributing](https://github.com/prod-broke-again/smart-commit/blob/main/CONTRIBUTING.md)
+
 ## 🚀 Особенности
 
 - 🤖 **AI-powered**: Генерация сообщений коммитов с помощью GPT моделей через [gptunnel.ru](https://docs.gptunnel.ru)
