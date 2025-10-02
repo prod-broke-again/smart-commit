@@ -76,10 +76,25 @@ export class GitOperations implements IGitAnalyzer {
   }
 
   public async commitAndPush(message: string): Promise<void> {
-    // Escape single quotes in message for shell
-    const escapedMessage = message.replace(/'/g, "'\\''");
+    // Use git commit with -F flag to read message from stdin to avoid shell escaping issues
+    const { spawn } = require('child_process');
 
-    await execAsync(`git commit -m '${escapedMessage}'`, { cwd: process.cwd() });
+    await new Promise<void>((resolve, reject) => {
+      const git = spawn('git', ['commit', '-F', '-'], { cwd: process.cwd() });
+
+      git.stdin.write(message);
+      git.stdin.end();
+
+      git.on('close', (code: number) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`git commit failed with code ${code}`));
+        }
+      });
+
+      git.on('error', reject);
+    });
 
     const hasRemote = await this.hasRemote();
     if (hasRemote) {
