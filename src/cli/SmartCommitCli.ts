@@ -2,6 +2,8 @@ import chalk from 'chalk';
 import { Container } from '../infrastructure/di/Container';
 import { IWorkflowOrchestrator, WorkflowOptions } from '../application/interfaces/IWorkflowOrchestrator';
 import { IConfigurationManager, GlobalConfig, ProjectConfig } from '../application/interfaces/IConfigurationManager';
+import { ModelManager } from '../application/services/ModelManager';
+import { AiModel } from '../domain/entities/AiModel';
 
 /**
  * Main CLI class for Smart Commit Tool
@@ -10,6 +12,7 @@ export class SmartCommitCli {
   private container: Container;
   private workflowOrchestrator: IWorkflowOrchestrator;
   private configManager: IConfigurationManager;
+  private modelManager: ModelManager;
 
   constructor() {
     this.container = Container.getInstance();
@@ -23,6 +26,7 @@ export class SmartCommitCli {
       await this.container.initialize();
       this.workflowOrchestrator = this.container.workflowOrchestrator;
       this.configManager = this.container.configManager;
+      this.modelManager = this.container.modelManager;
     }
   }
 
@@ -105,6 +109,64 @@ export class SmartCommitCli {
       console.log(chalk.blue('Merged configuration (project + global):'));
       this.printConfig(config);
     }
+  }
+
+  /**
+   * Refresh models from API
+   */
+  public async refreshModels(): Promise<void> {
+    await this.initialize();
+
+    console.log(chalk.blue('🔄 Refreshing models from API...'));
+
+    try {
+      await this.modelManager.refreshModels();
+      console.log(chalk.green('✓ Models updated successfully!'));
+
+      const models = AiModel.getAvailableModels();
+      console.log(chalk.cyan(`Available models: ${models.length}`));
+      for (const model of models.slice(0, 5)) {
+        console.log(chalk.gray(`  - ${model.name} (${model.maxTokens} tokens)`));
+      }
+      if (models.length > 5) {
+        console.log(chalk.gray(`  ... and ${models.length - 5} more`));
+      }
+    } catch (error) {
+      console.error(chalk.red('✗ Failed to refresh models:'), error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * List available models
+   */
+  public async listModels(): Promise<void> {
+    await this.initialize();
+
+    const models = AiModel.getAvailableModels();
+    console.log(chalk.blue(`Available models: ${models.length}`));
+
+    for (const model of models) {
+      const marker = model.name === 'gpt-3.5-turbo' ? '★' : ' ';
+      console.log(`${marker} ${chalk.cyan(model.name)} (${model.maxTokens} tokens)`);
+    }
+
+    const currentModels = this.modelManager.getCurrentModels();
+    if (currentModels) {
+      console.log(chalk.gray(`\nLoaded from API: ${currentModels.length} models`));
+    } else {
+      console.log(chalk.yellow('\nUsing fallback models (API not loaded)'));
+    }
+  }
+
+  /**
+   * Clear models cache
+   */
+  public async clearModelsCache(): Promise<void> {
+    await this.initialize();
+
+    await this.modelManager.clearCache();
+    console.log(chalk.green('✓ Models cache cleared'));
   }
 
   /**

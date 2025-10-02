@@ -67,6 +67,50 @@ program
     }
   });
 
+// Models commands
+program
+  .command('models')
+  .description('Manage AI models')
+  .addCommand(
+    new (require('commander').Command)('list')
+      .description('List available models')
+      .action(async () => {
+        try {
+          const cli = new SmartCommitCli();
+          await cli.listModels();
+        } catch (error) {
+          console.error('Error:', error.message);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new (require('commander').Command)('refresh')
+      .description('Refresh models from API')
+      .action(async () => {
+        try {
+          const cli = new SmartCommitCli();
+          await cli.refreshModels();
+        } catch (error) {
+          console.error('Error:', error.message);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new (require('commander').Command)('clear-cache')
+      .description('Clear models cache')
+      .action(async () => {
+        try {
+          const cli = new SmartCommitCli();
+          await cli.clearModelsCache();
+        } catch (error) {
+          console.error('Error:', error.message);
+          process.exit(1);
+        }
+      })
+  );
+
 // Setup command
 program
   .command('setup')

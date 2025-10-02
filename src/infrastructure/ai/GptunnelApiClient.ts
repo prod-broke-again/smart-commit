@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { AiModel } from '../../domain/entities/AiModel';
+import { AiModel, GptunnelModelInfo } from '../../domain/entities/AiModel';
 import { ApiCredentials } from '../../domain/value-objects/ApiCredentials';
 import { IAiAssistant, AiGenerationOptions, ModelCapabilities } from '../../domain/services/IAiAssistant';
 
@@ -93,9 +93,30 @@ export class GptunnelApiClient implements IAiAssistant {
   }
 
   public async getAvailableModels(): Promise<readonly AiModel[]> {
-    // For now, return predefined models since GPTunnel doesn't have a models endpoint
-    // In production, this could be fetched from API if available
     return AiModel.getAvailableModels();
+  }
+
+  /**
+   * Fetch models from GPTunnel API
+   */
+  public async fetchModelsFromApi(): Promise<readonly GptunnelModelInfo[]> {
+    try {
+      const response = await this.httpClient.get('/models');
+
+      if (response.data?.object === 'list' && Array.isArray(response.data?.data)) {
+        return response.data.data as GptunnelModelInfo[];
+      }
+
+      throw new Error('Invalid response format from models API');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          throw new Error('Invalid API key for models request');
+        }
+        throw new Error(`Failed to fetch models: ${error.response?.data?.error?.message || error.message}`);
+      }
+      throw error;
+    }
   }
 
   public estimateTokens(text: string): number {

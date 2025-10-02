@@ -9,6 +9,7 @@ import { GptunnelApiClient } from '../ai/GptunnelApiClient';
 import { ConfigFileManager } from '../filesystem/ConfigFileManager';
 import { CommitGenerator } from '../../application/services/CommitGenerator';
 import { WorkflowOrchestrator } from '../../application/services/WorkflowOrchestrator';
+import { ModelManager } from '../../application/services/ModelManager';
 
 /**
  * Dependency injection container
@@ -68,11 +69,18 @@ export class Container {
     this.registerSingleton<IConfigurationManager>('IConfigurationManager', configManager);
 
     // Application services
+    const modelManager = new ModelManager(aiAssistant);
     const commitGenerator = new CommitGenerator(aiAssistant);
     const workflowOrchestrator = new WorkflowOrchestrator(gitAnalyzer, commitGenerator, configManager);
 
+    this.registerSingleton<ModelManager>('ModelManager', modelManager);
     this.registerSingleton<ICommitGenerator>('ICommitGenerator', commitGenerator);
     this.registerSingleton<IWorkflowOrchestrator>('IWorkflowOrchestrator', workflowOrchestrator);
+
+    // Load models on startup (don't wait for it)
+    modelManager.loadModels().catch(error => {
+      console.warn('Failed to load models on startup:', error);
+    });
   }
 
   /**
@@ -108,5 +116,12 @@ export class Container {
    */
   public get workflowOrchestrator(): IWorkflowOrchestrator {
     return this.get<IWorkflowOrchestrator>('IWorkflowOrchestrator');
+  }
+
+  /**
+   * Gets model manager
+   */
+  public get modelManager(): ModelManager {
+    return this.get<ModelManager>('ModelManager');
   }
 }
