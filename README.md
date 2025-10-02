@@ -5,6 +5,8 @@
 
 Глобальный инструмент для генерации осмысленных сообщений коммитов с использованием ИИ.
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/prod-broke-again/smart-commit)
+
 ## 🚀 Особенности
 
 - 🤖 **AI-powered**: Генерация сообщений коммитов с помощью GPT моделей через [gptunnel.ru](https://docs.gptunnel.ru)
@@ -17,7 +19,15 @@
 ## 📦 Установка
 
 ```bash
+# Установка из npm (пока не опубликовано)
 npm install -g smart-commit
+
+# Или установка из репозитория
+git clone https://github.com/prod-broke-again/smart-commit.git
+cd smart-commit
+npm install
+npm run build
+npm link
 ```
 
 ## ⚙️ Настройка
