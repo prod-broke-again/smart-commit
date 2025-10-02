@@ -36,5 +36,11 @@ logs/
 tmp/
 temp/
 
+# Test files (created during development/testing)
+test-*.js
+test-*.md
+*-test.js
+*-test.md
+
 # Husky
 .husky/_
