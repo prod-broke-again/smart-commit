@@ -27,6 +27,12 @@ export class SmartCommitCli {
       this.workflowOrchestrator = this.container.workflowOrchestrator;
       this.configManager = this.container.configManager;
       this.modelManager = this.container.modelManager;
+
+      // Load models in background (don't wait)
+      this.modelManager.loadModels().catch(error => {
+        // Silently ignore model loading errors in CLI
+        console.debug('Failed to load models:', error.message);
+      });
     }
   }
 
@@ -143,12 +149,24 @@ export class SmartCommitCli {
   public async listModels(): Promise<void> {
     await this.initialize();
 
+    // Wait for models to load (with timeout)
+    await Promise.race([
+      this.modelManager.loadModels(),
+      new Promise(resolve => setTimeout(resolve, 5000)) // 5 second timeout
+    ]).catch(() => {
+      // Ignore errors, will use fallback models
+    });
+
     const models = AiModel.getAvailableModels();
     console.log(chalk.blue(`Available models: ${models.length}`));
 
-    for (const model of models) {
-      const marker = model.name === 'gpt-3.5-turbo' ? '★' : ' ';
+    for (const model of models.slice(0, 10)) {
+      const marker = model.name === 'gpt-4o-mini' ? '★' : ' ';
       console.log(`${marker} ${chalk.cyan(model.name)} (${model.maxTokens} tokens)`);
+    }
+
+    if (models.length > 10) {
+      console.log(chalk.gray(`  ... and ${models.length - 10} more`));
     }
 
     const currentModels = this.modelManager.getCurrentModels();
