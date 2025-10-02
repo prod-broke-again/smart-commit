@@ -64,6 +64,13 @@ export class Container {
     const globalConfig = await configManager.getGlobalConfig();
     const aiAssistant = new GptunnelApiClient(globalConfig.useWalletBalance);
 
+    // Set credentials if API key is available
+    if (globalConfig.apiKey) {
+      const { ApiCredentials } = await import('../../domain/value-objects/ApiCredentials');
+      const credentials = ApiCredentials.create(globalConfig.apiKey, globalConfig.defaultProvider);
+      aiAssistant.setCredentials(credentials);
+    }
+
     this.registerSingleton<IGitAnalyzer>('IGitAnalyzer', gitAnalyzer);
     this.registerSingleton<IAiAssistant>('IAiAssistant', aiAssistant);
     this.registerSingleton<IConfigurationManager>('IConfigurationManager', configManager);
@@ -77,10 +84,7 @@ export class Container {
     this.registerSingleton<ICommitGenerator>('ICommitGenerator', commitGenerator);
     this.registerSingleton<IWorkflowOrchestrator>('IWorkflowOrchestrator', workflowOrchestrator);
 
-    // Load models on startup (don't wait for it)
-    modelManager.loadModels().catch(error => {
-      console.warn('Failed to load models on startup:', error);
-    });
+    // Don't load models on startup to avoid blocking with API errors
   }
 
   /**

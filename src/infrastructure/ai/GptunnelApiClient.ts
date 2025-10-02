@@ -141,6 +141,7 @@ export class GptunnelApiClient implements IAiAssistant {
    * Sets API credentials for subsequent requests
    */
   public setCredentials(credentials: ApiCredentials): void {
+    // GPTunnel API expects just the API key in Authorization header
     this.httpClient.defaults.headers.common['Authorization'] = credentials.apiKey;
   }
 
