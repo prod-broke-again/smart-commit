@@ -49,8 +49,8 @@ export class GptunnelApiClient implements IAiAssistant {
 
     // Different models use different parameter names for max tokens
     if (model.name.startsWith('gpt-5')) {
-      // GPT-5 models use max_completion_tokens - use reasonable limit for commit messages
-      requestBody.max_completion_tokens = Math.min(maxTokens, 500);
+      // GPT-5 models use max_completion_tokens - allow full token limit for GPT-5-nano
+      requestBody.max_completion_tokens = maxTokens;
     } else {
       // GPT-4 and other models use max_tokens
       requestBody.max_tokens = maxTokens;

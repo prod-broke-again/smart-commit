@@ -31,11 +31,15 @@ export class CommitGenerator implements ICommitGenerator {
     // Analyze changes to determine commit type
     const commitType = CommitType.determineFromChanges(changes);
 
-    // Generate description using AI
+    // Generate description using AI with appropriate token limits
     const prompt = this.buildCommitPrompt(changes, commitType, language, options);
+
+    // Use higher token limits for GPT-5 models (like in original script)
+    const maxTokens = model.name.startsWith('gpt-5') ? 120000 : 100;
+
     const description = await this.aiAssistant.generateText(prompt, {
       model,
-      maxTokens: 100,
+      maxTokens,
       temperature: 0.7,
       customInstructions: options.customInstructions ?? undefined,
     });
