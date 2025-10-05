@@ -2,13 +2,14 @@
 
 const { Command } = require('commander');
 const { SmartCommitCli } = require('../lib/cli/SmartCommitCli');
+const packageJson = require('../package.json');
 
 const program = new Command();
 
 program
   .name('smart-commit')
   .description('Smart Commit Tool - AI-powered conventional commit messages')
-  .version('1.0.6');
+  .version(packageJson.version);
 
 program
   .option('--dry-run', 'Show what would be committed without making changes')

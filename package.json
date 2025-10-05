@@ -15,7 +15,10 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
     "prepare": "husky install",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "version:patch": "npm version patch && npm run build",
+    "version:minor": "npm version minor && npm run build",
+    "version:major": "npm version major && npm run build"
   },
   "engines": {
     "node": ">=16.0.0",
