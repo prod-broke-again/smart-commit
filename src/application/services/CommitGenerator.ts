@@ -165,14 +165,14 @@ Requirements:
 - Be specific about new features, entities, DTOs, repositories, migrations
 - Start with imperative mood in the main description
 - Keep main description under 70 characters, but be detailed in bullet points
-- Use format like: "- 🧠 Added domain entities: GameSession, GameCase, GameClue"
+- Use format like: "- 🔐 Added authentication entities: User, AuthToken, LoginRequest"
 ${customInstructions ? `\nAdditional instructions: ${customInstructions}` : ''}
 
 Example format:
-feat: implemented basic AI game with sessions and cases 🚀
-- 🧠 Added domain entities and VOs: GameSession, GameCase, GameClue, GameAnswer, SessionId, UserId, GameStatus
-- 🔧 Implemented DTOs: CreateGameSessionRequest, GameActionRequest, GameSessionResponse
-- 🚀 Engine and contracts: added GameEngineInterface and GameEngine for session management
+feat: implement user authentication system 🔐
+- 🔐 Added authentication entities: User, AuthToken, LoginRequest
+- 🛡️ Implemented security services: PasswordHasher, TokenValidator
+- 🚀 Added auth endpoints: login, register, logout
 
 Main description:`;
     } else {
@@ -328,6 +328,9 @@ Description:`;
 
     // Remove quotes if present
     clean = clean.replace(/^["']|["']$/g, '');
+
+    // Remove commit type prefix if present (feat:, fix:, etc.)
+    clean = clean.replace(/^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?(!)?:\s*/i, '');
 
     // Remove trailing punctuation
     clean = clean.replace(/[.!?]*$/, '');
