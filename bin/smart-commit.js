@@ -155,4 +155,18 @@ program
     }
   });
 
+// Smart deploy command
+program
+  .command('deploy-smart')
+  .description('Execute only necessary server commands based on changes')
+  .action(async () => {
+    try {
+      const cli = new SmartCommitCli();
+      await cli.deploySmart();
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
 program.parse();

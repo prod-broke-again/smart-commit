@@ -10,6 +10,8 @@ import { ConfigFileManager } from '../filesystem/ConfigFileManager';
 import { CommitGenerator } from '../../application/services/CommitGenerator';
 import { WorkflowOrchestrator } from '../../application/services/WorkflowOrchestrator';
 import { ModelManager } from '../../application/services/ModelManager';
+import { ProjectAnalyzer } from '../../application/services/ProjectAnalyzer';
+import { ServerCommandExecutor } from '../../application/services/ServerCommandExecutor';
 
 /**
  * Dependency injection container
@@ -79,10 +81,14 @@ export class Container {
     const modelManager = new ModelManager(aiAssistant);
     const commitGenerator = new CommitGenerator(aiAssistant);
     const workflowOrchestrator = new WorkflowOrchestrator(gitAnalyzer, commitGenerator, configManager);
+    const projectAnalyzer = new ProjectAnalyzer(aiAssistant);
+    const serverCommandExecutor = new ServerCommandExecutor();
 
     this.registerSingleton<ModelManager>('ModelManager', modelManager);
     this.registerSingleton<ICommitGenerator>('ICommitGenerator', commitGenerator);
     this.registerSingleton<IWorkflowOrchestrator>('IWorkflowOrchestrator', workflowOrchestrator);
+    this.registerSingleton<ProjectAnalyzer>('ProjectAnalyzer', projectAnalyzer);
+    this.registerSingleton<ServerCommandExecutor>('ServerCommandExecutor', serverCommandExecutor);
 
     // Don't load models on startup to avoid blocking with API errors
   }

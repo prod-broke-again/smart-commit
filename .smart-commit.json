@@ -2,25 +2,45 @@
   "serverCommands": {
     "enabled": true,
     "autoExecute": false,
-    "projectPath": "/var/www/fimbra",
+    "projectPath": "/var/www/fordaq",
     "server": {
       "host": "217.198.12.212",
       "user": "root",
       "port": 22,
-      "keyPath": "~/.ssh/id_rsa"
+      "keyPath": "~/.ssh/id_cursor"
     },
     "commands": {
       "git": ["git pull origin main"],
-      "frontend": ["npm i", "npm run build"],
-      "backend": ["composer install --no-dev --optimize-autoloader", "php artisan optimize:clear"],
-      "database": ["php artisan migrate --force"],
-      "system": ["sudo apt-get update -y", "sudo apt-get install php8.3-fpm -y", "sudo systemctl restart php8.3-fpm", "sudo systemctl restart nginx"]
+      "frontend": [
+        "npm i",
+        "npm run build"
+      ],
+      "backend": [
+        "php artisan optimize:clear"
+      ],
+      "database": [
+        "php artisan migrate --force"
+      ],
+      "docker": [],
+      "system": [
+        "sudo apt-get update -y",
+        "sudo apt-get install php8.3-fpm -y",
+        "sudo systemctl restart php8.3-fpm",
+        "sudo systemctl restart nginx"
+      ]
     },
-    "whitelist": ["npm", "yarn", "composer", "php artisan", "docker-compose", "sudo systemctl", "sudo apt-get"]
+    "whitelist": [
+      "npm",
+      "yarn",
+      "composer",
+      "php artisan",
+      "docker-compose",
+      "sudo systemctl"
+    ]
   },
   "projectInfo": {
     "type": "php",
     "framework": "laravel",
-    "packageManager": "npm"
+    "packageManager": "composer"
   }
 }

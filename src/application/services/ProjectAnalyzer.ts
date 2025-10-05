@@ -13,6 +13,18 @@ export interface ProjectInfo {
   directories: string[];
 }
 
+export interface SmartDeployAnalysis {
+  needsGitPull: boolean;
+  needsComposerInstall: boolean;
+  needsComposerUpdate: boolean;
+  needsNpmInstall: boolean;
+  needsNpmBuild: boolean;
+  needsLaravelOptimize: boolean;
+  needsLaravelMigrate: boolean;
+  needsSystemRestart: boolean;
+  reasons: string[];
+}
+
 export interface ServerCommandsConfig {
   enabled: boolean;
   autoExecute: boolean;
@@ -103,6 +115,141 @@ export class ProjectAnalyzer {
     );
 
     return projectInfo;
+  }
+
+  /**
+   * Analyze changes and determine what commands are needed
+   */
+  public async analyzeChangesForSmartDeploy(projectPath: string): Promise<SmartDeployAnalysis> {
+    const analysis: SmartDeployAnalysis = {
+      needsGitPull: true, // Always pull latest changes
+      needsComposerInstall: false,
+      needsComposerUpdate: false,
+      needsNpmInstall: false,
+      needsNpmBuild: false,
+      needsLaravelOptimize: false,
+      needsLaravelMigrate: false,
+      needsSystemRestart: false,
+      reasons: []
+    };
+
+    try {
+      // Get git diff to see what changed
+      const { execSync } = require('child_process');
+      const gitDiff = execSync('git diff --name-only HEAD~1 HEAD', { 
+        cwd: projectPath, 
+        encoding: 'utf8' 
+      }).trim();
+
+      if (!gitDiff) {
+        analysis.reasons.push('No changes detected in last commit');
+        return analysis;
+      }
+
+      const changedFiles = gitDiff.split('\n').filter((file: string) => file.trim());
+      analysis.reasons.push(`Detected changes in ${changedFiles.length} files`);
+
+      // Analyze file types and determine needed actions
+      for (const file of changedFiles) {
+        const filePath = file.toLowerCase();
+
+        // Composer dependencies
+        if (filePath === 'composer.json' || filePath === 'composer.lock') {
+          analysis.needsComposerInstall = true;
+          analysis.reasons.push(`Composer dependencies changed (${file})`);
+        }
+
+        // NPM dependencies
+        if (filePath === 'package.json' || filePath === 'package-lock.json') {
+          analysis.needsNpmInstall = true;
+          analysis.reasons.push(`NPM dependencies changed (${file})`);
+        }
+
+        // Frontend files - need build
+        if (filePath.includes('resources/js/') || 
+            filePath.includes('resources/css/') || 
+            filePath.includes('resources/views/') ||
+            filePath.includes('webpack.mix.js') ||
+            filePath.includes('vite.config.js')) {
+          analysis.needsNpmBuild = true;
+          analysis.reasons.push(`Frontend files changed (${file})`);
+        }
+
+        // Laravel config files - need optimize
+        if (filePath.includes('config/') || 
+            filePath.includes('.env') ||
+            filePath.includes('routes/') ||
+            filePath.includes('app/Providers/')) {
+          analysis.needsLaravelOptimize = true;
+          analysis.reasons.push(`Laravel configuration changed (${file})`);
+        }
+
+        // Database migrations
+        if (filePath.includes('database/migrations/')) {
+          analysis.needsLaravelMigrate = true;
+          analysis.reasons.push(`Database migration detected (${file})`);
+        }
+
+        // System files - might need restart
+        if (filePath.includes('nginx.conf') || 
+            filePath.includes('php.ini') ||
+            filePath.includes('supervisor/')) {
+          analysis.needsSystemRestart = true;
+          analysis.reasons.push(`System configuration changed (${file})`);
+        }
+      }
+
+    } catch (error) {
+      // If git diff fails, assume we need everything
+      analysis.needsComposerInstall = true;
+      analysis.needsNpmInstall = true;
+      analysis.needsNpmBuild = true;
+      analysis.needsLaravelOptimize = true;
+      analysis.reasons.push('Git analysis failed, running full deployment');
+    }
+
+    return analysis;
+  }
+
+  /**
+   * Generate smart deployment commands based on analysis
+   */
+  public generateSmartDeployCommands(analysis: SmartDeployAnalysis, _config: ServerCommandsConfig): string[] {
+    const commands: string[] = [];
+
+    // Always pull latest changes
+    if (analysis.needsGitPull) {
+      commands.push('git pull origin main');
+    }
+
+    // Composer commands
+    if (analysis.needsComposerInstall) {
+      commands.push('composer install --no-dev --optimize-autoloader');
+    }
+
+    // NPM commands
+    if (analysis.needsNpmInstall) {
+      commands.push('npm install');
+    }
+    if (analysis.needsNpmBuild) {
+      commands.push('npm run build');
+    }
+
+    // Laravel commands
+    if (analysis.needsLaravelOptimize) {
+      commands.push('php artisan optimize:clear');
+    }
+    if (analysis.needsLaravelMigrate) {
+      commands.push('php artisan migrate --force');
+    }
+
+    // System commands (only if needed)
+    if (analysis.needsSystemRestart) {
+      commands.push('sudo systemctl restart php8.3-fpm');
+      commands.push('sudo systemctl restart nginx');
+    }
+
+    return commands;
   }
 
   /**

@@ -258,6 +258,97 @@ export class SmartCommitCli {
   }
 
   /**
+   * Execute smart server commands based on changes
+   */
+  public async deploySmart(): Promise<void> {
+    await this.initialize();
+
+    const projectPath = process.cwd();
+    const configPath = path.join(projectPath, '.smart-commit.json');
+
+    try {
+      // Check if config exists
+      if (!await fs.pathExists(configPath)) {
+        throw new Error('Configuration file not found. Run "smart-commit generate-config" first.');
+      }
+
+      // Load configuration
+      const configData = await fs.readJson(configPath);
+      const serverConfig = configData.serverCommands;
+
+      if (!serverConfig || !serverConfig.enabled) {
+        throw new Error('Server commands are disabled in configuration');
+      }
+
+      // Validate configuration
+      const executor = this.container.get<ServerCommandExecutor>('ServerCommandExecutor');
+      const validationErrors = executor.validateConfig(serverConfig);
+      if (validationErrors.length > 0) {
+        throw new Error(`Invalid server configuration: ${validationErrors.join(', ')}`);
+      }
+
+      console.log(chalk.blue('🔍 Analyzing changes for smart deployment...'));
+
+      // Analyze changes
+      const projectAnalyzer = this.container.get<ProjectAnalyzer>('ProjectAnalyzer');
+      const analysis = await projectAnalyzer.analyzeChangesForSmartDeploy(projectPath);
+
+      // Show analysis results
+      console.log(chalk.green('\n📊 Analysis Results:'));
+      analysis.reasons.forEach(reason => {
+        console.log(chalk.gray(`  • ${reason}`));
+      });
+
+      // Generate smart commands
+      const smartCommands = projectAnalyzer.generateSmartDeployCommands(analysis, serverConfig);
+
+      if (smartCommands.length === 0) {
+        console.log(chalk.yellow('✅ No deployment needed - no changes detected!'));
+        return;
+      }
+
+      console.log(chalk.yellow(`\n⚠️  Smart deployment will execute ${smartCommands.length} commands:`));
+      console.log(chalk.gray(`Server: ${serverConfig.server?.user}@${serverConfig.server?.host}`));
+      
+      smartCommands.forEach((command, index) => {
+        console.log(chalk.gray(`  ${index + 1}. ${command}`));
+      });
+
+      console.log(chalk.yellow('\nContinue? [y/N]'));
+      
+      // Ask for user confirmation
+      const shouldContinue = await this.askForConfirmation();
+      if (!shouldContinue) {
+        console.log(chalk.red('Smart deployment cancelled by user.'));
+        return;
+      }
+
+      // Execute smart commands
+      console.log(chalk.blue(`\n🚀 Executing ${smartCommands.length} smart commands...`));
+      
+      const results = await executor.executeSmartCommands(serverConfig, smartCommands, serverConfig.projectPath);
+      
+      // Show summary
+      const successCount = results.filter(r => r.success).length;
+      const totalCount = results.length;
+      
+      console.log(chalk.blue(`\n📊 Execution Summary:`));
+      console.log(chalk.green(`✓ Successful: ${successCount}/${totalCount}`));
+      console.log(chalk.red(`✗ Failed: ${totalCount - successCount}/${totalCount}`));
+
+      if (successCount === totalCount) {
+        console.log(chalk.green('\n🎉 Smart deployment completed successfully!'));
+      } else {
+        console.log(chalk.red('\n❌ Some commands failed. Check the output above.'));
+      }
+
+    } catch (error) {
+      console.error(chalk.red(`Smart deployment failed: ${error instanceof Error ? error.message : String(error)}`));
+      throw error;
+    }
+  }
+
+  /**
    * Execute server commands
    */
   public async deployServer(): Promise<void> {

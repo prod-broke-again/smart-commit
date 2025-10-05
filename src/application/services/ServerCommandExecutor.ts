@@ -10,6 +10,33 @@ export interface SshExecutionResult {
 
 export class ServerCommandExecutor {
   /**
+   * Execute smart commands via SSH
+   */
+  public async executeSmartCommands(
+    config: ServerCommandsConfig,
+    commands: string[],
+    projectPath?: string
+  ): Promise<SshExecutionResult[]> {
+    if (!config.enabled || !config.server) {
+      throw new Error('Server commands are disabled or server configuration is missing');
+    }
+
+    // Use projectPath from config if not provided
+    const finalProjectPath = projectPath || config.projectPath || '/var/www/html';
+
+    const results: SshExecutionResult[] = [];
+
+    console.log(chalk.blue(`\n🚀 Executing ${commands.length} smart commands on server...`));
+    console.log(chalk.gray(`Server: ${config.server.user}@${config.server.host}:${config.server.port || 22}`));
+    console.log(chalk.gray(`Project path: ${finalProjectPath}\n`));
+
+    // Execute commands via SSH
+    await this.executeViaSsh(config.server, finalProjectPath, commands.map(cmd => ({ category: 'smart', command: cmd })), results);
+
+    return results;
+  }
+
+  /**
    * Execute server commands via SSH
    */
   public async executeCommands(
