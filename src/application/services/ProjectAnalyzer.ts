@@ -108,28 +108,38 @@ export class ProjectAnalyzer {
    */
   public async generateServerCommandsConfig(projectInfo: ProjectInfo, projectPath: string): Promise<ServerCommandsConfig> {
     const projectFiles = await this.getRelevantProjectFiles(projectPath);
+    const composerInfo = await this.getComposerInfo(projectPath);
+    const packageInfo = await this.getPackageInfo(projectPath);
     
-    const prompt = `Analyze this project and generate server deployment commands configuration.
+    const prompt = `You are a DevOps expert analyzing a Laravel + Vue.js project. Generate precise server deployment commands based on the EXACT project configuration.
 
-Project Info:
+PROJECT ANALYSIS:
 - Type: ${projectInfo.type}
 - Framework: ${projectInfo.framework || 'none'}
 - Package Manager: ${projectInfo.packageManager || 'none'}
 - Has Docker: ${projectInfo.hasDocker}
 - Has Database: ${projectInfo.hasDatabase}
 
-Project Files:
+${composerInfo ? `COMPOSER.JSON DETAILS:
+${composerInfo}` : ''}
+
+${packageInfo ? `PACKAGE.JSON DETAILS:
+${packageInfo}` : ''}
+
+PROJECT FILES:
 ${projectFiles.map(file => `- ${file}`).join('\n')}
 
-Generate a JSON configuration for server commands that should be executed after git push.
-Include commands for:
-1. Frontend build (if applicable)
-2. Backend deployment (if applicable) 
-3. Database migrations (if applicable)
-4. Docker operations (if applicable)
-5. System services restart (if applicable)
+CRITICAL REQUIREMENTS - Generate commands based on ACTUAL project setup:
 
-Return ONLY valid JSON in this format:
+1. PHP VERSION: Extract exact PHP version from composer.json (e.g., "^8.2" = php8.2-fpm)
+2. FRONTEND: If package.json has "build" script, include "npm run build"
+3. LARAVEL: Always include: composer install --no-dev --optimize-autoloader, php artisan config:cache, php artisan route:cache, php artisan view:cache
+4. FILAMENT: If Filament detected, include "php artisan filament:upgrade"
+5. INERTIA/VUE: If Vue detected, include frontend build commands
+6. DATABASE: Include "php artisan migrate --force" if database folder exists or Laravel detected
+7. QUEUE: Include "php artisan queue:restart" if queue workers detected
+
+Return ONLY valid JSON (no explanations, no markdown):
 {
   "enabled": true,
   "autoExecute": false,
@@ -141,10 +151,10 @@ Return ONLY valid JSON in this format:
   },
   "commands": {
     "frontend": ["npm run build"],
-    "backend": ["composer install --no-dev", "php artisan migrate"],
-    "database": ["php artisan migrate"],
-    "docker": ["docker-compose down", "docker-compose up -d --build"],
-    "system": ["sudo systemctl restart nginx"]
+    "backend": ["composer install --no-dev --optimize-autoloader", "php artisan config:cache", "php artisan route:cache", "php artisan view:cache", "php artisan filament:upgrade"],
+    "database": ["php artisan migrate --force"],
+    "docker": [],
+    "system": ["sudo systemctl restart php8.2-fpm", "sudo systemctl restart nginx"]
   },
   "whitelist": ["npm", "yarn", "composer", "php artisan", "docker-compose", "sudo systemctl"]
 }`;
@@ -216,6 +226,50 @@ Return ONLY valid JSON in this format:
     return relevantFiles.slice(0, 20); // Limit to 20 files
   }
 
+  private async getComposerInfo(projectPath: string): Promise<string | null> {
+    try {
+      const composerPath = path.join(projectPath, 'composer.json');
+      const composerContent = await fs.readFile(composerPath, 'utf-8');
+      const composer = JSON.parse(composerContent);
+      
+      const phpVersion = composer.require?.php || 'unknown';
+      const laravelVersion = composer.require?.['laravel/framework'] || 'unknown';
+      const hasFilament = composer.require?.['filament/filament'] ? 'yes' : 'no';
+      const hasInertia = composer.require?.['inertiajs/inertia-laravel'] ? 'yes' : 'no';
+      const hasQueue = composer.require?.['laravel/horizon'] || composer.require?.['laravel/telescope'] ? 'yes' : 'no';
+      
+      return `PHP Version: ${phpVersion}
+Laravel Version: ${laravelVersion}
+Has Filament: ${hasFilament}
+Has Inertia: ${hasInertia}
+Has Queue: ${hasQueue}`;
+    } catch {
+      return null;
+    }
+  }
+
+  private async getPackageInfo(projectPath: string): Promise<string | null> {
+    try {
+      const packagePath = path.join(projectPath, 'package.json');
+      const packageContent = await fs.readFile(packagePath, 'utf-8');
+      const packageJson = JSON.parse(packageContent);
+      
+      const hasBuildScript = packageJson.scripts?.build ? 'yes' : 'no';
+      const hasDevScript = packageJson.scripts?.dev ? 'yes' : 'no';
+      const hasVue = packageJson.dependencies?.['vue'] || packageJson.devDependencies?.['vue'] ? 'yes' : 'no';
+      const hasVite = packageJson.devDependencies?.['vite'] ? 'yes' : 'no';
+      const hasTailwind = packageJson.devDependencies?.['tailwindcss'] ? 'yes' : 'no';
+      
+      return `Has Build Script: ${hasBuildScript}
+Has Dev Script: ${hasDevScript}
+Has Vue: ${hasVue}
+Has Vite: ${hasVite}
+Has Tailwind: ${hasTailwind}`;
+    } catch {
+      return null;
+    }
+  }
+
   private getDefaultConfig(projectInfo: ProjectInfo): ServerCommandsConfig {
     const config: ServerCommandsConfig = {
       enabled: true,
@@ -231,7 +285,7 @@ Return ONLY valid JSON in this format:
         'php artisan route:cache',
         'php artisan view:cache'
       ];
-      config.commands.database = ['php artisan migrate'];
+      config.commands.database = ['php artisan migrate --force'];
       config.whitelist = ['composer', 'php artisan', 'sudo systemctl'];
     } else if (projectInfo.type === 'nodejs') {
       config.commands.frontend = ['npm run build'];
