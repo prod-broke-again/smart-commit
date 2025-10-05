@@ -92,10 +92,10 @@ MIT License - см. [LICENSE](LICENSE) для деталей.
 ## 🆘 Поддержка
 
 Если у вас есть вопросы или проблемы:
-- Создайте [Issue](https://github.com/your-username/smart-commit/issues)
+- Создайте [Issue](https://github.com/prod-broke-again/smart-commit/issues)
 - Обратитесь к [документации](docs/)
 
 ---
 
 **Версия:** 1.0.10  
-**Автор:** Smart Commit Team
+**Автор:** [Eugene (prod-broke-again)](https://github.com/prod-broke-again)

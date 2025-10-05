@@ -41,16 +41,17 @@
 
 1. Проверьте [Примеры использования](examples.md)
 2. Обратитесь к [Решение проблем](setup.md#решение-проблем)
-3. Создайте [Issue](https://github.com/your-username/smart-commit/issues)
+3. Создайте [Issue](https://github.com/prod-broke-again/smart-commit/issues)
 
 ## 📝 Вклад в документацию
 
 Мы приветствуем улучшения документации! Если вы нашли ошибку или хотите добавить что-то полезное:
 
-1. Создайте [Issue](https://github.com/your-username/smart-commit/issues)
-2. Предложите [Pull Request](https://github.com/your-username/smart-commit/pulls)
+1. Создайте [Issue](https://github.com/prod-broke-again/smart-commit/issues)
+2. Предложите [Pull Request](https://github.com/prod-broke-again/smart-commit/pulls)
 
 ---
 
 **Версия документации:** 1.0.10  
-**Последнее обновление:** Октябрь 2025
+**Последнее обновление:** Октябрь 2025  
+**Автор:** [Eugene (prod-broke-again)](https://github.com/prod-broke-again)
