@@ -3,7 +3,11 @@ import { Container } from '../infrastructure/di/Container';
 import { IWorkflowOrchestrator, WorkflowOptions } from '../application/interfaces/IWorkflowOrchestrator';
 import { IConfigurationManager, GlobalConfig, ProjectConfig } from '../application/interfaces/IConfigurationManager';
 import { ModelManager } from '../application/services/ModelManager';
+import { ProjectAnalyzer } from '../application/services/ProjectAnalyzer';
+import { IAiAssistant } from '../domain/services/IAiAssistant';
 import { AiModel } from '../domain/entities/AiModel';
+import * as fs from 'fs-extra';
+import * as path from 'path';
 
 /**
  * Main CLI class for Smart Commit Tool
@@ -195,6 +199,60 @@ export class SmartCommitCli {
 
     await this.modelManager.clearCache();
     console.log(chalk.green('✓ Models cache cleared'));
+  }
+
+  /**
+   * Generate project configuration
+   */
+  public async generateConfig(): Promise<void> {
+    await this.initialize();
+
+    console.log(chalk.blue('🔧 Generating project configuration...'));
+    
+    const projectPath = process.cwd();
+    const aiAssistant = this.container.get<IAiAssistant>('IAiAssistant');
+    const projectAnalyzer = new ProjectAnalyzer(aiAssistant);
+
+    try {
+      // Analyze project
+      console.log(chalk.gray('Analyzing project structure...'));
+      const projectInfo = await projectAnalyzer.analyzeProject(projectPath);
+      
+      console.log(chalk.green(`✓ Detected project type: ${projectInfo.type}`));
+      if (projectInfo.framework) {
+        console.log(chalk.green(`✓ Framework: ${projectInfo.framework}`));
+      }
+      if (projectInfo.packageManager) {
+        console.log(chalk.green(`✓ Package manager: ${projectInfo.packageManager}`));
+      }
+
+      // Generate server commands config
+      console.log(chalk.gray('Generating server commands configuration...'));
+      const serverConfig = await projectAnalyzer.generateServerCommandsConfig(projectInfo, projectPath);
+
+      // Create config file
+      const configPath = path.join(projectPath, '.smart-commit.json');
+      const config = {
+        serverCommands: serverConfig,
+        projectInfo: {
+          type: projectInfo.type,
+          framework: projectInfo.framework,
+          packageManager: projectInfo.packageManager
+        }
+      };
+
+      await fs.writeJson(configPath, config, { spaces: 2 });
+      
+      console.log(chalk.green(`✓ Configuration saved to ${configPath}`));
+      console.log(chalk.yellow('\nNext steps:'));
+      console.log(chalk.gray('1. Review the generated configuration'));
+      console.log(chalk.gray('2. Update server connection details if needed'));
+      console.log(chalk.gray('3. Test with: smart-commit --dry-run'));
+
+    } catch (error) {
+      console.error(chalk.red('Failed to generate configuration:'), error);
+      throw error;
+    }
   }
 
   /**

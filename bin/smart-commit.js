@@ -126,4 +126,18 @@ program
     }
   });
 
+// Generate config command
+program
+  .command('generate-config')
+  .description('Generate project-specific configuration')
+  .action(async () => {
+    try {
+      const cli = new SmartCommitCli();
+      await cli.generateConfig();
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
 program.parse();

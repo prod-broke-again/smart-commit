@@ -1,0 +1,29 @@
+{
+  "serverCommands": {
+    "enabled": true,
+    "autoExecute": false,
+    "server": {
+      "host": "example.com",
+      "user": "deploy",
+      "port": 22,
+      "keyPath": "~/.ssh/id_rsa"
+    },
+    "commands": {
+      "frontend": [],
+      "backend": [
+        "npm install",
+        "npm start"
+      ],
+      "database": [],
+      "docker": [],
+      "system": []
+    },
+    "whitelist": [
+      "npm"
+    ]
+  },
+  "projectInfo": {
+    "type": "nodejs",
+    "packageManager": "npm"
+  }
+}
