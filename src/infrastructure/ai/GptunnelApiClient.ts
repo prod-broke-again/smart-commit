@@ -62,11 +62,10 @@ export class GptunnelApiClient implements IAiAssistant {
     }
 
     try {
-      console.log('Sending request to GPTunnel API:');
+      console.log('Sending request to GPTunnel API...');
       console.log('Model:', model.name);
       console.log('Prompt length:', prompt.length, 'characters');
       console.log('Estimated tokens:', this.estimateTokens(prompt));
-      console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
       const response = await this.httpClient.post('/chat/completions', requestBody);
 
@@ -80,6 +79,13 @@ export class GptunnelApiClient implements IAiAssistant {
       if (content.trim().length === 0 && choice.finish_reason === 'length') {
         throw new Error('Response was truncated due to max_completion_tokens limit. Try increasing the limit.');
       }
+
+      // Show prompt and response after successful generation
+      console.log('\n--- AI Prompt ---');
+      console.log(prompt);
+      console.log('\n--- AI Response ---');
+      console.log(content.trim());
+      console.log('--- End ---\n');
 
       return content.trim();
     } catch (error) {
