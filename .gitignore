@@ -42,5 +42,11 @@ test-*.md
 *-test.js
 *-test.md
 
+# Technical specifications and internal docs
+TECHNICAL_SPECIFICATION.md
+INTERNAL_NOTES.md
+DEVELOPMENT_PLAN.md
+TESTER_RECRUITMENT_PLAN.md
+
 # Husky
 .husky/_
