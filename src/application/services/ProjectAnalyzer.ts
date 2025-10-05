@@ -23,6 +23,7 @@ export interface ServerCommandsConfig {
     keyPath?: string;
   };
   commands: {
+    git?: string[];
     frontend?: string[];
     backend?: string[];
     database?: string[];
@@ -131,6 +132,7 @@ ${projectFiles.map(file => `- ${file}`).join('\n')}
 
 CRITICAL REQUIREMENTS - Generate commands based on ACTUAL project setup:
 
+0. ALWAYS START with "git pull origin main" (or current branch)
 1. PHP VERSION: Extract exact PHP version from composer.json (e.g., "^8.2" = php8.2-fpm)
 2. FRONTEND: If package.json has "build" script, include "npm run build"
 3. LARAVEL: Always include: composer install --no-dev --optimize-autoloader, php artisan config:cache, php artisan route:cache, php artisan view:cache
@@ -150,7 +152,8 @@ Return ONLY valid JSON (no explanations, no markdown):
     "keyPath": "~/.ssh/id_rsa"
   },
   "commands": {
-    "frontend": ["npm run build"],
+    "git": ["git pull origin main"],
+    "frontend": ["npm install", "npm run build"],
     "backend": ["composer install --no-dev --optimize-autoloader", "php artisan config:cache", "php artisan route:cache", "php artisan view:cache", "php artisan filament:upgrade"],
     "database": ["php artisan migrate --force"],
     "docker": [],

@@ -140,4 +140,18 @@ program
     }
   });
 
+// Deploy command
+program
+  .command('deploy')
+  .description('Execute server commands via SSH')
+  .action(async () => {
+    try {
+      const cli = new SmartCommitCli();
+      await cli.deployServer();
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
 program.parse();

@@ -4,6 +4,7 @@ import { IWorkflowOrchestrator, WorkflowOptions } from '../application/interface
 import { IConfigurationManager, GlobalConfig, ProjectConfig } from '../application/interfaces/IConfigurationManager';
 import { ModelManager } from '../application/services/ModelManager';
 import { ProjectAnalyzer } from '../application/services/ProjectAnalyzer';
+import { ServerCommandExecutor } from '../application/services/ServerCommandExecutor';
 import { IAiAssistant } from '../domain/services/IAiAssistant';
 import { AiModel } from '../domain/entities/AiModel';
 import * as fs from 'fs-extra';
@@ -247,10 +248,101 @@ export class SmartCommitCli {
       console.log(chalk.yellow('\nNext steps:'));
       console.log(chalk.gray('1. Review the generated configuration'));
       console.log(chalk.gray('2. Update server connection details if needed'));
-      console.log(chalk.gray('3. Test with: smart-commit --dry-run'));
+      console.log(chalk.gray('3. Test with: smart-commit deploy'));
 
     } catch (error) {
       console.error(chalk.red('Failed to generate configuration:'), error);
+      throw error;
+    }
+  }
+
+  /**
+   * Execute server commands
+   */
+  public async deployServer(): Promise<void> {
+    await this.initialize();
+
+    const projectPath = process.cwd();
+    const configPath = path.join(projectPath, '.smart-commit.json');
+
+    try {
+      // Check if config exists
+      if (!await fs.pathExists(configPath)) {
+        throw new Error('Configuration file not found. Run "smart-commit generate-config" first.');
+      }
+
+      // Load configuration
+      const config = await fs.readJson(configPath);
+      const serverConfig = config.serverCommands;
+
+      if (!serverConfig) {
+        throw new Error('Server commands configuration not found in config file.');
+      }
+
+      // Validate configuration
+      const executor = new ServerCommandExecutor();
+      const validationErrors = executor.validateConfig(serverConfig);
+      
+      if (validationErrors.length > 0) {
+        console.error(chalk.red('Configuration validation failed:'));
+        validationErrors.forEach(error => console.error(chalk.red(`- ${error}`)));
+        throw new Error('Invalid server configuration');
+      }
+
+      // Ask for confirmation
+      console.log(chalk.yellow('\n⚠️  This will execute commands on the remote server:'));
+      console.log(chalk.gray(`Server: ${serverConfig.server?.user}@${serverConfig.server?.host}`));
+      
+      if (!serverConfig.autoExecute) {
+        console.log(chalk.yellow('\nCommands to be executed:'));
+        
+        const allCommands: { category: string; command: string }[] = [];
+        if (serverConfig.commands.git) {
+          serverConfig.commands.git.forEach((cmd: string) => allCommands.push({ category: 'git', command: cmd }));
+        }
+        if (serverConfig.commands.frontend) {
+          serverConfig.commands.frontend.forEach((cmd: string) => allCommands.push({ category: 'frontend', command: cmd }));
+        }
+        if (serverConfig.commands.backend) {
+          serverConfig.commands.backend.forEach((cmd: string) => allCommands.push({ category: 'backend', command: cmd }));
+        }
+        if (serverConfig.commands.database) {
+          serverConfig.commands.database.forEach((cmd: string) => allCommands.push({ category: 'database', command: cmd }));
+        }
+        if (serverConfig.commands.docker) {
+          serverConfig.commands.docker.forEach((cmd: string) => allCommands.push({ category: 'docker', command: cmd }));
+        }
+        if (serverConfig.commands.system) {
+          serverConfig.commands.system.forEach((cmd: string) => allCommands.push({ category: 'system', command: cmd }));
+        }
+
+        allCommands.forEach(({ category, command }, index) => {
+          console.log(chalk.gray(`  ${index + 1}. [${category}] ${command}`));
+        });
+
+        console.log(chalk.yellow('\nContinue? [y/N]'));
+        // For now, auto-continue (can be made interactive later)
+      }
+
+      // Execute commands
+      const results = await executor.executeCommands(serverConfig);
+      
+      // Show summary
+      const successCount = results.filter(r => r.success).length;
+      const totalCount = results.length;
+      
+      console.log(chalk.blue(`\n📊 Execution Summary:`));
+      console.log(chalk.green(`✓ Successful: ${successCount}/${totalCount}`));
+      console.log(chalk.red(`✗ Failed: ${totalCount - successCount}/${totalCount}`));
+
+      if (successCount === totalCount) {
+        console.log(chalk.green('\n🎉 All commands executed successfully!'));
+      } else {
+        console.log(chalk.yellow('\n⚠️  Some commands failed. Check the output above for details.'));
+      }
+
+    } catch (error) {
+      console.error(chalk.red('Deployment failed:'), error);
       throw error;
     }
   }
