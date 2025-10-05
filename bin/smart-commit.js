@@ -8,7 +8,7 @@ const program = new Command();
 program
   .name('smart-commit')
   .description('Smart Commit Tool - AI-powered conventional commit messages')
-  .version('1.0.0');
+  .version('1.0.3');
 
 program
   .option('--dry-run', 'Show what would be committed without making changes')
