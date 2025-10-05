@@ -2,23 +2,25 @@
   "serverCommands": {
     "enabled": true,
     "autoExecute": false,
-    "commands": {
-      "frontend": [
-        "npm run build"
-      ],
-      "backend": [
-        "npm install --production"
-      ]
+    "projectPath": "/var/www/fimbra",
+    "server": {
+      "host": "217.198.12.212",
+      "user": "root",
+      "port": 22,
+      "keyPath": "~/.ssh/id_rsa"
     },
-    "whitelist": [
-      "npm",
-      "yarn",
-      "pnpm",
-      "sudo systemctl"
-    ]
+    "commands": {
+      "git": ["git pull origin main"],
+      "frontend": ["npm i", "npm run build"],
+      "backend": ["composer install --no-dev --optimize-autoloader", "php artisan optimize:clear"],
+      "database": ["php artisan migrate --force"],
+      "system": ["sudo apt-get update -y", "sudo apt-get install php8.3-fpm -y", "sudo systemctl restart php8.3-fpm", "sudo systemctl restart nginx"]
+    },
+    "whitelist": ["npm", "yarn", "composer", "php artisan", "docker-compose", "sudo systemctl", "sudo apt-get"]
   },
   "projectInfo": {
-    "type": "nodejs",
+    "type": "php",
+    "framework": "laravel",
     "packageManager": "npm"
   }
 }

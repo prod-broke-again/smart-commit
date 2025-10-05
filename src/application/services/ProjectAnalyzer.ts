@@ -16,6 +16,7 @@ export interface ProjectInfo {
 export interface ServerCommandsConfig {
   enabled: boolean;
   autoExecute: boolean;
+  projectPath?: string;
   server?: {
     host: string;
     user: string;
@@ -34,7 +35,7 @@ export interface ServerCommandsConfig {
 }
 
 export class ProjectAnalyzer {
-  constructor(private readonly aiAssistant: IAiAssistant) {}
+  constructor(private readonly _aiAssistant: IAiAssistant) {}
 
   /**
    * Analyze project structure and determine project type
@@ -145,6 +146,7 @@ Return ONLY valid JSON (no explanations, no markdown):
 {
   "enabled": true,
   "autoExecute": false,
+  "projectPath": "/var/www/html",
   "server": {
     "host": "example.com",
     "user": "deploy",
@@ -162,7 +164,7 @@ Return ONLY valid JSON (no explanations, no markdown):
   "whitelist": ["npm", "yarn", "composer", "php artisan", "docker-compose", "sudo systemctl"]
 }`;
 
-    const response = await this.aiAssistant.generateText(prompt, {
+    const response = await this._aiAssistant.generateText(prompt, {
       model: AiModel.GPT_4,
       maxTokens: 2000,
       temperature: 0.3
@@ -277,6 +279,7 @@ Has Tailwind: ${hasTailwind}`;
     const config: ServerCommandsConfig = {
       enabled: true,
       autoExecute: false,
+      projectPath: '/var/www/html',
       commands: {},
       whitelist: []
     };

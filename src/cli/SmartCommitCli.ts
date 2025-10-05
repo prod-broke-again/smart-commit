@@ -9,6 +9,7 @@ import { IAiAssistant } from '../domain/services/IAiAssistant';
 import { AiModel } from '../domain/entities/AiModel';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import * as readline from 'readline';
 
 /**
  * Main CLI class for Smart Commit Tool
@@ -321,11 +322,17 @@ export class SmartCommitCli {
         });
 
         console.log(chalk.yellow('\nContinue? [y/N]'));
-        // For now, auto-continue (can be made interactive later)
+        
+        // Ask for user confirmation
+        const shouldContinue = await this.askForConfirmation();
+        if (!shouldContinue) {
+          console.log(chalk.red('Deployment cancelled by user.'));
+          return;
+        }
       }
 
       // Execute commands
-      const results = await executor.executeCommands(serverConfig);
+      const results = await executor.executeCommands(serverConfig, serverConfig.projectPath);
       
       // Show summary
       const successCount = results.filter(r => r.success).length;
@@ -428,5 +435,23 @@ export class SmartCommitCli {
     const mask = '*'.repeat(apiKey.length - 8);
 
     return `${start}${mask}${end}`;
+  }
+
+  /**
+   * Ask user for confirmation
+   */
+  private async askForConfirmation(): Promise<boolean> {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    return new Promise((resolve) => {
+      rl.question('', (answer) => {
+        rl.close();
+        const response = answer.toLowerCase().trim();
+        resolve(response === 'y' || response === 'yes');
+      });
+    });
   }
 }

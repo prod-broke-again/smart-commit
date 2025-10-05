@@ -14,11 +14,14 @@ export class ServerCommandExecutor {
    */
   public async executeCommands(
     config: ServerCommandsConfig,
-    projectPath: string = '/var/www/html'
+    projectPath?: string
   ): Promise<SshExecutionResult[]> {
     if (!config.enabled || !config.server) {
       throw new Error('Server commands are disabled or server configuration is missing');
     }
+
+    // Use projectPath from config if not provided
+    const finalProjectPath = projectPath || config.projectPath || '/var/www/html';
 
     const results: SshExecutionResult[] = [];
     
@@ -46,10 +49,10 @@ export class ServerCommandExecutor {
 
     console.log(chalk.blue(`\n🚀 Executing ${allCommands.length} commands on server...`));
     console.log(chalk.gray(`Server: ${config.server.user}@${config.server.host}:${config.server.port || 22}`));
-    console.log(chalk.gray(`Project path: ${projectPath}\n`));
+    console.log(chalk.gray(`Project path: ${finalProjectPath}\n`));
 
     // Execute commands via SSH
-    await this.executeViaSsh(config.server, projectPath, allCommands, results);
+    await this.executeViaSsh(config.server, finalProjectPath, allCommands, results);
 
     return results;
   }
