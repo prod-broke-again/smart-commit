@@ -10,7 +10,7 @@ Global AI-powered tool for generating meaningful commit messages.
 ## 🌍 Available Languages
 
 - 🇺🇸 **English** (current)
-- 🇷🇺 [**Русский (Russian)**](README.md)
+- 🇷🇺 [**Русский (Russian)**](README.ru.md)
 - 🇨🇳 [中文 (Chinese)](README.cn.md) - *coming soon*
 - 🇪🇸 [Español (Spanish)](README.es.md) - *coming soon*
 - 🇩🇪 [Deutsch (German)](README.de.md) - *coming soon*

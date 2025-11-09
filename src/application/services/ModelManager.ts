@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as os from 'os';
-import { AiModel, GptunnelModelInfo } from '../../domain/entities/AiModel';
+import { AiModel, AiModelDescriptor, GptunnelModelInfo } from '../../domain/entities/AiModel';
 import { IAiAssistant } from '../../domain/services/IAiAssistant';
 
 /**
@@ -9,7 +9,8 @@ import { IAiAssistant } from '../../domain/services/IAiAssistant';
  */
 export class ModelManager {
   private readonly modelsCachePath: string;
-  private cachedModels: GptunnelModelInfo[] | null = null;
+  private cachedModels: AiModelDescriptor[] | null = null;
+  private cachedProvider: string | null = null;
   private lastFetchTime: number = 0;
   private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -22,24 +23,42 @@ export class ModelManager {
    */
   public async loadModels(forceRefresh: boolean = false): Promise<void> {
     try {
+      const provider = this.aiAssistant.getProviderId();
+      const canFetch = typeof this.aiAssistant.fetchModelsFromApi === 'function';
+
+      if (!canFetch) {
+        // Provider does not support dynamic model discovery
+        return;
+      }
+
       // Try to load from cache first
-      if (!forceRefresh && this.cachedModels && this.isCacheValid()) {
-        AiModel.loadFromApi(this.cachedModels);
+      if (
+        !forceRefresh &&
+        this.cachedModels &&
+        this.cachedProvider === provider &&
+        this.isCacheValid()
+      ) {
+        AiModel.registerProviderDescriptors(provider, this.cachedModels);
         return;
       }
 
       // Load from cache file
       if (!forceRefresh) {
         const cachedData = await this.loadFromCache();
-        if (cachedData && this.isCacheValid()) {
-          this.cachedModels = cachedData;
-          AiModel.loadFromApi(cachedData);
+        if (
+          cachedData &&
+          cachedData.provider === provider &&
+          this.isCacheValid()
+        ) {
+          this.cachedModels = cachedData.models;
+          this.cachedProvider = provider;
+          AiModel.registerProviderDescriptors(provider, cachedData.models);
           return;
         }
       }
 
       // Fetch from API
-      await this.fetchAndCacheModels();
+      await this.fetchAndCacheModels(provider);
 
     } catch (error) {
       console.warn('Failed to load models from API, using fallback models:', error);
@@ -52,13 +71,14 @@ export class ModelManager {
    * Force refresh models from API
    */
   public async refreshModels(): Promise<void> {
-    await this.fetchAndCacheModels();
+    const provider = this.aiAssistant.getProviderId();
+    await this.fetchAndCacheModels(provider);
   }
 
   /**
    * Get current models info
    */
-  public getCurrentModels(): readonly GptunnelModelInfo[] | null {
+  public getCurrentModels(): readonly AiModelDescriptor[] | null {
     return this.cachedModels;
   }
 
@@ -72,12 +92,34 @@ export class ModelManager {
   /**
    * Load models from cache file
    */
-  private async loadFromCache(): Promise<GptunnelModelInfo[] | null> {
+  private async loadFromCache(): Promise<{ provider: string; models: AiModelDescriptor[] } | null> {
     try {
       const cacheData = await fs.readJson(this.modelsCachePath);
       if (cacheData.models && Array.isArray(cacheData.models) && cacheData.timestamp) {
         this.lastFetchTime = cacheData.timestamp;
-        return cacheData.models;
+        const provider = typeof cacheData.provider === 'string' ? cacheData.provider.toLowerCase() : 'gptunnel';
+
+        const rawModels = cacheData.models as any[];
+        const models: AiModelDescriptor[] = rawModels.every((model: any) => typeof model?.name === 'string')
+          ? rawModels.map(model => ({
+              name: String(model.name),
+              provider: (model.provider ?? provider).toLowerCase(),
+              maxTokens: typeof model.maxTokens === 'number' ? model.maxTokens : 128000,
+              temperature: typeof model.temperature === 'number' ? model.temperature : 0.7,
+              supportsStreaming: Boolean(model.supportsStreaming),
+            }))
+          : (rawModels as GptunnelModelInfo[]).map(model => ({
+              name: model.id,
+              provider: 'gptunnel',
+              maxTokens: model.max_capacity,
+              temperature: 0.7,
+              supportsStreaming: false,
+            }));
+
+        return {
+          provider,
+          models,
+        };
       }
     } catch {
       // Cache doesn't exist or is invalid
@@ -88,29 +130,35 @@ export class ModelManager {
   /**
    * Fetch models from API and save to cache
    */
-  private async fetchAndCacheModels(): Promise<void> {
-    if (!(this.aiAssistant instanceof Object && 'fetchModelsFromApi' in this.aiAssistant)) {
+  private async fetchAndCacheModels(provider: string): Promise<void> {
+    if (typeof this.aiAssistant.fetchModelsFromApi !== 'function') {
       throw new Error('AI assistant does not support model fetching');
     }
 
-    const models = await (this.aiAssistant as any).fetchModelsFromApi();
-    this.cachedModels = models;
+    const models = await this.aiAssistant.fetchModelsFromApi() as readonly AiModelDescriptor[];
+    const descriptors = models.map(model => ({
+      ...model,
+      provider: model.provider.toLowerCase(),
+    }));
+    this.cachedModels = descriptors;
+    this.cachedProvider = provider;
     this.lastFetchTime = Date.now();
 
     // Save to cache
-    await this.saveToCache(models);
+    await this.saveToCache(provider, descriptors);
 
     // Load into AiModel
-    AiModel.loadFromApi(models);
+    AiModel.registerProviderDescriptors(provider, descriptors);
   }
 
   /**
    * Save models to cache file
    */
-  private async saveToCache(models: GptunnelModelInfo[]): Promise<void> {
+  private async saveToCache(provider: string, models: AiModelDescriptor[]): Promise<void> {
     try {
       await fs.ensureDir(path.dirname(this.modelsCachePath));
       await fs.writeJson(this.modelsCachePath, {
+        provider,
         models,
         timestamp: this.lastFetchTime,
         version: '1.0'
@@ -127,6 +175,7 @@ export class ModelManager {
     try {
       await fs.remove(this.modelsCachePath);
       this.cachedModels = null;
+      this.cachedProvider = null;
       this.lastFetchTime = 0;
     } catch (error) {
       console.warn('Failed to clear models cache:', error);

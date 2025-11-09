@@ -1,63 +1,47 @@
-# Smart Commit AI
+# Smart Commit Tool
 
-Умный инструмент для генерации осмысленных сообщений коммитов с использованием ИИ и автоматического деплоя.
+[![npm version](https://badge.fury.io/js/smart-commit-ai.svg)](https://badge.fury.io/js/smart-commit-ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/prod-broke-again/smart-commit)
 
-## 🚀 Быстрый старт
+> 🇷🇺 Ищете русскую версию? [Откройте README.ru.md на GitHub](https://github.com/prod-broke-again/smart-commit/blob/main/README.ru.md)
+
+Global AI-powered tool for generating meaningful commit messages and running smart deployment workflows.
+
+## 🔗 Links
+
+- 📖 [Full documentation](docs/README.md)
+- 🐛 [Report a bug](https://github.com/prod-broke-again/smart-commit/issues)
+- 💡 [Request a feature](https://github.com/prod-broke-again/smart-commit/discussions)
+- 🤝 [Contribution guide](https://github.com/prod-broke-again/smart-commit/blob/main/CONTRIBUTING.md)
+
+## ✨ Features
+
+- 🤖 **AI-powered commits**: Generate high-quality commit messages with GPT models
+- 📋 **Conventional Commits**: Fully supports the conventional commits format
+- 🌍 **Multi-language**: Works in English and Russian out of the box
+- 🔧 **Smart deploy**: Detects necessary commands based on changed files
+- ⚡ **Fast deploy**: Run the full set of deployment commands when needed
+- 🎯 **Project analysis**: Automatically understands your project structure
+- 🧱 **Clean architecture**: SOLID-first, testable, and extensible codebase
+
+## 🚀 Quick Start
 
 ```bash
-# Установка
+# Install globally
 npm install -g smart-commit-ai
 
-# Первоначальная настройка
+# Initial setup (configure API key, prompts, etc.)
 smart-commit setup
 
-# Генерация коммита
+# Generate and create a commit
 smart-commit
 
-# Умный деплой
+# Run smart deploy
 smart-commit deploy-smart
 ```
 
-## ✨ Основные возможности
-
-- **🤖 ИИ-генерация коммитов** - автоматическое создание осмысленных сообщений коммитов
-- **📋 Conventional Commits** - поддержка стандарта conventional commits
-- **🌍 Многоязычность** - генерация коммитов на русском и английском языках
-- **🔧 Умный деплой** - анализ изменений и выполнение только необходимых команд
-- **⚡ Быстрый деплой** - полный деплой всех команд
-- **🎯 Анализ проекта** - автоматическое определение типа проекта и настройка
-
-## 📚 Документация
-
-- [📖 Полная документация](docs/README.md)
-- [🚀 Установка и настройка](docs/setup.md)
-- [🛠️ Основные команды](docs/commands.md)
-- [🧠 Умный деплой](docs/smart-deploy.md)
-- [⚡ Обычный деплой](docs/deploy.md)
-- [⚙️ Конфигурация](docs/configuration.md)
-- [📊 Примеры использования](docs/examples.md)
-
-## 🛠️ Команды
-
-| Команда | Описание |
-|---------|----------|
-| `smart-commit` | Генерация и создание коммита |
-| `smart-commit deploy-smart` | Умный деплой (только нужные команды) |
-| `smart-commit deploy` | Полный деплой всех команд |
-| `smart-commit setup` | Первоначальная настройка |
-| `smart-commit generate-config` | Генерация конфигурации проекта |
-| `smart-commit config` | Управление конфигурацией |
-| `smart-commit models` | Управление ИИ моделями |
-
-## 🔧 Поддерживаемые проекты
-
-- **PHP/Laravel** - полная поддержка с анализом composer.json
-- **Node.js** - поддержка npm/yarn проектов
-- **Vue.js/React** - анализ фронтенд файлов
-- **TypeScript** - поддержка TS проектов
-- **Docker** - базовые команды Docker
-
-## 🎯 Умный деплой в действии
+## 🧠 Smart Deploy Example
 
 ```bash
 🔍 Analyzing changes for smart deployment...
@@ -75,27 +59,93 @@ smart-commit deploy-smart
 Continue? [y/N]
 ```
 
-## 📦 Установка
+## 🛠 Supported Projects
+
+- **PHP/Laravel** — reads `composer.json`, artisan commands, etc.
+- **Node.js** — npm/yarn projects with package scripts
+- **Vue.js / React** — front-end frameworks detection
+- **TypeScript** — full TS support
+- **Docker** — basic Docker workflows
+
+## 🎯 CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `smart-commit` | Generate and create a commit |
+| `smart-commit --generate-only` | Generate a message without committing |
+| `smart-commit --dry-run` | Preview what would be committed |
+| `smart-commit deploy-smart` | Run smart deploy (only required commands) |
+| `smart-commit deploy` | Run full deploy pipeline |
+| `smart-commit setup` | Initial configuration wizard |
+| `smart-commit config` | Manage config (global or project) |
+| `smart-commit models` | Manage AI models cache |
+
+## ⚙️ Configuration
+
+All settings can be stored globally (`~/.smart-commit/config.json`) or per-project (`.smart-commit.json`).
 
 ```bash
-npm install -g smart-commit-ai
+# Set API key
+smart-commit config --global --set apiKey=YOUR_API_KEY
+
+# Switch analysis mode
+smart-commit config --global --set analysisMode=full
+
+# Change default language
+smart-commit config --set language=ru
+
+# Inspect current configuration
+smart-commit config --global --list
 ```
 
-## 🤝 Вклад в проект
+## 🔧 Models & Providers
 
-Мы приветствуем вклад в развитие проекта! См. [CONTRIBUTING.md](CONTRIBUTING.md) для деталей.
+Smart Commit supports multiple AI providers (GPTunnel, OpenAI, Anthropic Claude, Google Gemini). Manage models via CLI:
 
-## 📄 Лицензия
+```bash
+# List models from current provider
+smart-commit models list
 
-MIT License - см. [LICENSE](LICENSE) для деталей.
+# Show all available models
+smart-commit models list --all
 
-## 🆘 Поддержка
+# Refresh models from API
+smart-commit models refresh
 
-Если у вас есть вопросы или проблемы:
-- Создайте [Issue](https://github.com/prod-broke-again/smart-commit/issues)
-- Обратитесь к [документации](docs/)
+# Clear local cache
+smart-commit models clear-cache
+```
+
+## 🧪 Example Workflow
+
+```bash
+$ smart-commit --generate-only
+✓ Analyzing repository...
+✓ Generating commit message...
+
+Generated commit message:
+feat: add user authentication module
+- 🔐 Implemented JWT-based authentication system
+- 👤 Added User model with validation
+- 🗄️ Created repository layer for persistence
+- 🛡️ Secured routes via auth middleware
+```
+
+## 🤝 Contributing
+
+Whether you want to fix a bug, propose a feature, or add a new language — contributions are welcome!
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+Smart Commit is released under the [MIT License](LICENSE).
 
 ---
 
-**Версия:** 1.0.10  
-**Автор:** [Eugene (prod-broke-again)](https://github.com/prod-broke-again)
+Made with ❤️ by [Eugene (prod-broke-again)](https://github.com/prod-broke-again)  
+Version: 1.0.11

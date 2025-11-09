@@ -161,6 +161,7 @@ Requirements:
 - Use appropriate emojis for different types of changes
 - Group changes by logical components (backend, frontend, database, etc.)
 - Focus on WHAT was added/changed, not HOW
+- Do not mention areas of the project that remained unchanged (avoid phrases like "backend not affected")
 - Analyze added classes, interfaces, functions, components, database tables, API endpoints
 - Be specific about new features, entities, DTOs, repositories, migrations
 - Start with imperative mood in the main description
@@ -186,6 +187,7 @@ Requirements:
 - Start with imperative mood (Add, Fix, Update, Remove, etc.)
 - Keep it under 50 characters when possible
 - Focus on what changed and why, not how
+- Do not mention areas of the project that remained unchanged (avoid phrases like "backend not affected")
 ${customInstructions ? `\nAdditional instructions: ${customInstructions}` : ''}
 
 Description:`;

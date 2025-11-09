@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { AiModel, GptunnelModelInfo } from '../../domain/entities/AiModel';
+import { AiModel, GptunnelModelInfo, AiModelDescriptor } from '../../domain/entities/AiModel';
 import { ApiCredentials } from '../../domain/value-objects/ApiCredentials';
 import { IAiAssistant, AiGenerationOptions, ModelCapabilities } from '../../domain/services/IAiAssistant';
 
@@ -22,6 +22,10 @@ export class GptunnelApiClient implements IAiAssistant {
     });
   }
 
+  public getProviderId(): string {
+    return 'gptunnel';
+  }
+
   public async generateText(prompt: string, options: AiGenerationOptions = {}): Promise<string> {
     const model = options.model || AiModel.GPT_3_5_TURBO;
     const maxTokens = options.maxTokens || Math.min(500, model.maxTokens - this.estimateTokens(prompt) - 100);
@@ -31,14 +35,21 @@ export class GptunnelApiClient implements IAiAssistant {
 
     const requestBody: any = {
       model: model.name,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      messages: [],
       stop: options.stopSequences,
     };
+
+    if (options.customInstructions) {
+      requestBody.messages.push({
+        role: 'system',
+        content: options.customInstructions,
+      });
+    }
+
+    requestBody.messages.push({
+      role: 'user',
+      content: prompt,
+    });
 
     // Add temperature only if it's not the default value or for non-GPT-5 models
     if (model.name.startsWith('gpt-5')) {
@@ -134,18 +145,25 @@ export class GptunnelApiClient implements IAiAssistant {
   }
 
   public async getAvailableModels(): Promise<readonly AiModel[]> {
-    return AiModel.getAvailableModels();
+    return AiModel.getAvailableModels(this.getProviderId());
   }
 
   /**
    * Fetch models from GPTunnel API
    */
-  public async fetchModelsFromApi(): Promise<readonly GptunnelModelInfo[]> {
+  public async fetchModelsFromApi(): Promise<readonly AiModelDescriptor[]> {
     try {
       const response = await this.httpClient.get('/models');
 
       if (response.data?.object === 'list' && Array.isArray(response.data?.data)) {
-        return response.data.data as GptunnelModelInfo[];
+        const models = response.data.data as GptunnelModelInfo[];
+        return models.map(model => ({
+          name: model.id,
+          provider: this.getProviderId(),
+          maxTokens: model.max_capacity,
+          temperature: 0.7,
+          supportsStreaming: false,
+        } satisfies AiModelDescriptor));
       }
 
       throw new Error('Invalid response format from models API');

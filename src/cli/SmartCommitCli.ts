@@ -135,7 +135,8 @@ export class SmartCommitCli {
       await this.modelManager.refreshModels();
       console.log(chalk.green('✓ Models updated successfully!'));
 
-      const models = AiModel.getAvailableModels();
+      const config = await this.configManager.getMergedConfig();
+      const models = AiModel.getAvailableModels(config.defaultProvider);
       console.log(chalk.cyan(`Available models: ${models.length}`));
       for (const model of models.slice(0, 5)) {
         console.log(chalk.gray(`  - ${model.name} (${model.maxTokens} tokens)`));
@@ -163,8 +164,8 @@ export class SmartCommitCli {
       // Ignore errors, will use fallback models
     });
 
-    const models = AiModel.getAvailableModels();
     const currentConfig = await this.configManager.getMergedConfig();
+    const models = AiModel.getAvailableModels(currentConfig.defaultProvider);
 
     console.log(chalk.blue(`Available models: ${models.length}`));
 

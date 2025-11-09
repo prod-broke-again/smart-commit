@@ -6,6 +6,11 @@ import { ApiCredentials } from '../value-objects/ApiCredentials';
  */
 export interface IAiAssistant {
   /**
+   * Returns unique provider identifier
+   */
+  getProviderId(): string;
+
+  /**
    * Generates text using AI model
    */
   generateText(
@@ -24,6 +29,11 @@ export interface IAiAssistant {
   getAvailableModels(): Promise<readonly AiModel[]>;
 
   /**
+   * Fetches models from remote API (optional, provider-specific)
+   */
+  fetchModelsFromApi?(): Promise<readonly unknown[]>;
+
+  /**
    * Estimates token count for text
    */
   estimateTokens(text: string): number;
@@ -32,6 +42,16 @@ export interface IAiAssistant {
    * Gets model capabilities and limits
    */
   getModelCapabilities(model: AiModel): ModelCapabilities;
+
+  /**
+   * Sets API credentials (optional)
+   */
+  setCredentials?(credentials: ApiCredentials): void;
+
+  /**
+   * Clears API credentials (optional)
+   */
+  clearCredentials?(): void;
 }
 
 /**
