@@ -59,8 +59,10 @@ export class TimewebApiClient implements IAiAssistant {
     const model = options.model || AiModel.OPENAI_GPT_4O_MINI;
     // Calculate token limits and temperature
     const estimatedPromptTokens = this.estimateTokens(prompt);
-    const remainingTokens = Math.max(model.maxTokens - estimatedPromptTokens, 100);
-    const maxTokens = Math.min(options.maxTokens ?? remainingTokens, model.maxTokens);
+    // Ensure we have enough tokens for response
+    // Timeweb has a limit of 8190 tokens for response generation
+    const remainingTokens = Math.max(model.maxTokens - estimatedPromptTokens, 500);
+    const maxTokens = options.maxTokens ?? Math.min(remainingTokens, 8190); // Timeweb limit: 8190 tokens
     const temperature = options.temperature ?? model.temperature;
 
     // Build messages array for OpenAI-compatible format
@@ -92,7 +94,7 @@ export class TimewebApiClient implements IAiAssistant {
       stop: options.stopSequences,
     };
 
-    // Timeweb agent endpoint structure (based on PHP implementation):
+    // Timeweb agent endpoint structure:
     // baseURL: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{agent_id}/v1
     // endpoint: /chat/completions
     // Full URL: baseURL + /chat/completions
@@ -111,12 +113,41 @@ export class TimewebApiClient implements IAiAssistant {
       }
       
       const response = await this.httpClient.post(endpoint, requestBody);
+      
+      // Log for debugging (only in DEBUG mode)
+      if (process.env['DEBUG']) {
+        console.log('Timeweb API Response:', {
+          status: response.status,
+          hasData: !!response.data,
+          hasChoices: !!response.data?.choices,
+        });
+      }
+      
       const choice = response.data?.choices?.[0];
       const content = choice?.message?.content;
 
       // Validate response
       if (!content) {
-        throw new Error('Некорректный ответ от Timeweb: пустое сообщение');
+        const finishReason = choice?.finish_reason;
+        const usage = response.data?.usage;
+        
+        // Log detailed error info for debugging
+        if (process.env['DEBUG']) {
+          console.error('Timeweb API Error Details:', {
+            finishReason,
+            usage,
+            responseData: response.data,
+          });
+        }
+        
+        // Provide more specific error message
+        if (finishReason === 'length') {
+          throw new Error(`Ответ от Timeweb был обрезан из-за лимита токенов. Увеличьте maxTokens (текущий: ${maxTokens}, использовано: ${usage?.completion_tokens ?? 0}, лимит: 8190)`);
+        } else if (finishReason) {
+          throw new Error(`Некорректный ответ от Timeweb: пустое сообщение (finish_reason: ${finishReason})`);
+        } else {
+          throw new Error('Некорректный ответ от Timeweb: пустое сообщение');
+        }
       }
 
       return content.trim();

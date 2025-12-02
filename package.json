@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "start": "node bin/smart-commit.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

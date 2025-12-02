@@ -43,6 +43,10 @@ export class CommitGenerator implements ICommitGenerator {
       maxTokens = isFullMode ? 128000 : 128000; // gpt-5-nano supports max 128k completion tokens
     } else if (model.name.startsWith('gpt-5')) {
       maxTokens = isFullMode ? 120000 : 120000; // Other GPT-5 models
+    } else if (model.name.includes('gemini') || model.provider === 'timeweb') {
+      // Gemini models and Timeweb models support large context windows
+      // Timeweb has a limit of 8190 tokens for response generation
+      maxTokens = isFullMode ? 8190 : 4000; // Use reasonable limits for these models
     } else {
       maxTokens = isFullMode ? 500 : 100; // GPT-4 and other models
     }
