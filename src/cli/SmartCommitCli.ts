@@ -77,20 +77,51 @@ export class SmartCommitCli {
 
   /**
    * Set configuration value
+   * Supports nested keys like "apiKeys.timeweb" or "apiKeys.openai"
    */
   public async setConfig(key: string, value: string, global: boolean = false): Promise<void> {
     await this.initialize();
     const parsedValue = this.parseConfigValue(value);
 
-    if (global) {
-      const config: Partial<GlobalConfig> = { [key]: parsedValue };
-      await this.configManager.saveGlobalConfig(config);
-      console.log(chalk.green(`Global config ${key} set to ${parsedValue}`));
+    // Handle nested keys (e.g., "apiKeys.timeweb")
+    if (key.includes('.')) {
+      const parts = key.split('.');
+      const rootKey = parts[0];
+      const nestedKey = parts.slice(1).join('.');
+
+      if (global) {
+        const currentConfig = await this.configManager.getGlobalConfig();
+        const rootValue = (currentConfig as any)[rootKey] || {};
+        const updatedRoot = { ...rootValue, [nestedKey]: parsedValue };
+        const config: Partial<GlobalConfig> = { [rootKey]: updatedRoot };
+        await this.configManager.saveGlobalConfig(config);
+        console.log(chalk.green(`Global config ${key} set to ${this.maskApiKeyIfNeeded(parsedValue as string)}`));
+      } else {
+        const currentConfig = await this.configManager.getProjectConfig();
+        const rootValue = (currentConfig as any)[rootKey] || {};
+        const updatedRoot = { ...rootValue, [nestedKey]: parsedValue };
+        const config: Partial<ProjectConfig> = { [rootKey]: updatedRoot };
+        await this.configManager.saveProjectConfig(config);
+        console.log(chalk.green(`Project config ${key} set to ${this.maskApiKeyIfNeeded(parsedValue as string)}`));
+      }
     } else {
-      const config: Partial<ProjectConfig> = { [key]: parsedValue };
-      await this.configManager.saveProjectConfig(config);
-      console.log(chalk.green(`Project config ${key} set to ${parsedValue}`));
+      if (global) {
+        const config: Partial<GlobalConfig> = { [key]: parsedValue };
+        await this.configManager.saveGlobalConfig(config);
+        console.log(chalk.green(`Global config ${key} set to ${this.maskApiKeyIfNeeded(parsedValue as string)}`));
+      } else {
+        const config: Partial<ProjectConfig> = { [key]: parsedValue };
+        await this.configManager.saveProjectConfig(config);
+        console.log(chalk.green(`Project config ${key} set to ${this.maskApiKeyIfNeeded(parsedValue as string)}`));
+      }
     }
+  }
+
+  private maskApiKeyIfNeeded(value: string): string {
+    if (typeof value === 'string' && value.length > 20) {
+      return this.maskApiKey(value);
+    }
+    return String(value);
   }
 
   /**

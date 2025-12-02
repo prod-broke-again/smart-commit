@@ -75,9 +75,16 @@ export class Container {
     // Get merged config (project config overrides global)
     const mergedConfig = await configManager.getMergedConfig();
 
+    // Get baseUrls from config if available
+    const baseUrls: Record<string, string> = {};
+    if (mergedConfig['baseUrls'] && typeof mergedConfig['baseUrls'] === 'object') {
+      Object.assign(baseUrls, mergedConfig['baseUrls']);
+    }
+
     const aiAssistant = AiProviderFactory.create(mergedConfig.defaultProvider, {
       credentials: mergedConfig.apiCredentials ?? null,
       useWalletBalance: mergedConfig['useWalletBalance'] as boolean ?? true,
+      baseUrls: Object.keys(baseUrls).length > 0 ? baseUrls : undefined,
     });
 
     this.registerSingleton<IGitAnalyzer>('IGitAnalyzer', gitAnalyzer);

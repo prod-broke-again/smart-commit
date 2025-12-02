@@ -44,6 +44,8 @@ export interface GlobalConfig {
   readonly apiKey?: string | null;
   /** API keys for different providers: { "openai": "key1", "timeweb": "key2", ... } */
   readonly apiKeys?: Record<string, string>;
+  /** Base URLs for different providers: { "openai": "https://...", "timeweb": "https://...", ... } */
+  readonly baseUrls?: Record<string, string>;
   readonly defaultModel: string;
   readonly defaultProvider: string;
   readonly maxTokens: number;

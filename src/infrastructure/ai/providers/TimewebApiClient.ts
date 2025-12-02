@@ -15,6 +15,7 @@ export class TimewebApiClient implements IAiAssistant {
   constructor(baseURL?: string) {
     // Базовый URL можно настроить через конфигурацию или использовать дефолтный
     // По документации, базовый URL находится в дашборде агента
+    // Формат: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{access_id}/v1
     this.baseURL = baseURL ?? 'https://agent.timeweb.cloud';
     this.httpClient = axios.create({
       baseURL: this.baseURL,
@@ -63,8 +64,11 @@ export class TimewebApiClient implements IAiAssistant {
     };
 
     try {
-      // Timeweb предоставляет OpenAI-совместимый endpoint /v1/chat/completions
-      const response = await this.httpClient.post('/v1/chat/completions', requestBody);
+      // Timeweb предоставляет OpenAI-совместимый endpoint
+      // Если baseURL уже содержит /v1, используем /chat/completions
+      // Иначе используем полный путь /v1/chat/completions
+      const endpoint = this.baseURL.includes('/v1') ? '/chat/completions' : '/v1/chat/completions';
+      const response = await this.httpClient.post(endpoint, requestBody);
       const choice = response.data?.choices?.[0];
       const content = choice?.message?.content;
 
@@ -86,7 +90,8 @@ export class TimewebApiClient implements IAiAssistant {
     try {
       this.setCredentials(credentials);
       // Попытка получить список моделей для валидации
-      await this.httpClient.get('/v1/models');
+      const endpoint = this.baseURL.includes('/v1') ? '/models' : '/v1/models';
+      await this.httpClient.get(endpoint);
       return true;
     } catch {
       return false;
@@ -101,7 +106,8 @@ export class TimewebApiClient implements IAiAssistant {
     this.ensureApiKey();
 
     try {
-      const response = await this.httpClient.get('/v1/models');
+      const endpoint = this.baseURL.includes('/v1') ? '/models' : '/v1/models';
+      const response = await this.httpClient.get(endpoint);
       const models = response.data?.data;
 
       if (!Array.isArray(models)) {
