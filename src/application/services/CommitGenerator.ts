@@ -364,10 +364,16 @@ Description:`;
     cleaned = cleaned.replace(/^["'`]|["'`]$/g, '');
 
     // For full mode: if the response contains "feat:", "fix:", etc. but has text before it, extract from that point
+    // But remove the commit type prefix since it will be added by CommitMessage.create()
     if (isFullMode) {
       const commitTypeMatch = cleaned.match(/(?:^|\n)((?:feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(?:\([^)]+\))?:.*)/i);
-      if (commitTypeMatch && commitTypeMatch.index && commitTypeMatch.index > 0) {
-        cleaned = cleaned.substring(commitTypeMatch.index).trim();
+      if (commitTypeMatch && commitTypeMatch.index !== undefined) {
+        if (commitTypeMatch.index > 0) {
+          // Extract from commit type if there's text before it
+          cleaned = cleaned.substring(commitTypeMatch.index).trim();
+        }
+        // Remove the commit type prefix (feat:, fix:, etc.) since it will be added by CommitMessage.create()
+        cleaned = cleaned.replace(/^(?:feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(?:\([^)]+\))?:\s*/i, '');
       }
     } else {
       // For lite mode: remove commit type prefix if present (feat:, fix:, etc.)
