@@ -60,7 +60,7 @@ export class CommitGenerator implements ICommitGenerator {
 
     // Clean and truncate description (allow longer descriptions for full mode)
     const descriptionMaxLength = options.analysisMode === 'full' ? Math.max(maxLength, 1000) : maxLength;
-    const cleanDescription = this.cleanDescription(description, descriptionMaxLength);
+    const cleanDescription = this.cleanDescription(description, descriptionMaxLength, options.analysisMode === 'full');
 
     // Determine scope if needed
     const scope = options.includeScope ? this.determineScope(changes) : null;
@@ -171,6 +171,9 @@ Requirements:
 - Start with imperative mood in the main description
 - Keep main description under 70 characters, but be detailed in bullet points
 - Use format like: "- 🔐 Added authentication entities: User, AuthToken, LoginRequest"
+- IMPORTANT: Start your response immediately with the commit message. Do NOT add greetings, introductions, or explanations before the commit message.
+- Do NOT write phrases like "Здравствуйте", "Я готов помочь", "Вот предложенное сообщение", etc.
+- Output ONLY the commit message in the format below, nothing else.
 ${customInstructions ? `\nAdditional instructions: ${customInstructions}` : ''}
 
 Example format:
@@ -192,6 +195,9 @@ Requirements:
 - Keep it under 50 characters when possible
 - Focus on what changed and why, not how
 - Do not mention areas of the project that remained unchanged (avoid phrases like "backend not affected")
+- IMPORTANT: Start your response immediately with the commit message. Do NOT add greetings, introductions, or explanations before the commit message.
+- Do NOT write phrases like "Здравствуйте", "Я готов помочь", "Вот предложенное сообщение", etc.
+- Output ONLY the commit message description, nothing else.
 ${customInstructions ? `\nAdditional instructions: ${customInstructions}` : ''}
 
 Description:`;
@@ -329,7 +335,59 @@ Description:`;
     return `${action.toLowerCase()} ${change.filePath}`;
   }
 
-  private cleanDescription(description: string, maxLength: number): string {
+  private cleanDescription(description: string, maxLength: number, isFullMode: boolean = false): string {
+    // Remove common greetings and introductions that Timeweb might add
+    const greetingPatterns = [
+      /^Здравствуйте[!.]?\s*/i,
+      /^Я готов помочь[^.]*\.\s*/i,
+      /^Вот предложенное сообщение[^.]*\.\s*/i,
+      /^На основе предоставленного анализа[^.]*\.\s*/i,
+      /^Вот предложение[^.]*\.\s*/i,
+      /^Предложенное сообщение[^.]*\.\s*/i,
+      /^В соответствии с Conventional Commits[^.]*\.\s*/i,
+    ];
+
+    let cleaned = description.trim();
+    
+    // Remove greeting patterns
+    for (const pattern of greetingPatterns) {
+      cleaned = cleaned.replace(pattern, '');
+    }
+
+    // If response starts with markdown code block, extract content
+    const codeBlockMatch = cleaned.match(/^```(?:\w+)?\s*\n(.*?)\n```/s);
+    if (codeBlockMatch) {
+      cleaned = codeBlockMatch[1].trim();
+    }
+
+    // Remove leading/trailing quotes if present
+    cleaned = cleaned.replace(/^["'`]|["'`]$/g, '');
+
+    // For full mode: if the response contains "feat:", "fix:", etc. but has text before it, extract from that point
+    if (isFullMode) {
+      const commitTypeMatch = cleaned.match(/(?:^|\n)((?:feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(?:\([^)]+\))?:.*)/i);
+      if (commitTypeMatch && commitTypeMatch.index && commitTypeMatch.index > 0) {
+        cleaned = cleaned.substring(commitTypeMatch.index).trim();
+      }
+    } else {
+      // For lite mode: remove commit type prefix if present (feat:, fix:, etc.)
+      cleaned = cleaned.replace(/^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?(!)?:\s*/i, '');
+      
+      // Remove trailing punctuation
+      cleaned = cleaned.replace(/[.!?]*$/, '');
+      
+      // Capitalize first letter
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
+
+    cleaned = cleaned.trim();
+
+    // Truncate if too long
+    if (cleaned.length > maxLength) {
+      cleaned = cleaned.substring(0, maxLength - 3) + '...';
+    }
+
+    return cleaned;
     let clean = description.trim();
 
     // Remove quotes if present
