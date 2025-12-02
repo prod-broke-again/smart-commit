@@ -139,10 +139,26 @@ export class TimewebApiClient implements IAiAssistant {
           errorMessage += `: ${error.message}`;
         }
         
-        // Add URL info for debugging
-        if (baseURL && requestUrl) {
-          errorMessage += `\nURL: ${baseURL}${requestUrl}`;
+        // Add detailed debugging info
+        const fullUrl = baseURL && requestUrl ? `${baseURL}${requestUrl}` : 'unknown';
+        errorMessage += `\nURL: ${fullUrl}`;
+        errorMessage += `\nBaseURL: ${this.baseURL}`;
+        errorMessage += `\nEndpoint: ${endpoint}`;
+        if (responseData) {
+          errorMessage += `\nResponse: ${JSON.stringify(responseData).substring(0, 200)}`;
         }
+        
+        // Log to console for debugging
+        console.error('Timeweb API Error Details:', {
+          status,
+          statusText,
+          baseURL: this.baseURL,
+          endpoint,
+          fullUrl,
+          hasApiKey: !!this.apiKey,
+          apiKeyPrefix: this.apiKey ? `${this.apiKey.substring(0, 20)}...` : 'none',
+          responseData,
+        });
         
         throw new Error(errorMessage);
       }
