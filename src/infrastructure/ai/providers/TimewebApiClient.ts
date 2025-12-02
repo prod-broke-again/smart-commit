@@ -5,7 +5,14 @@ import { IAiAssistant, AiGenerationOptions, ModelCapabilities } from '../../../d
 
 /**
  * Timeweb AI API client implementation
- * Timeweb provides OpenAI-compatible API for AI agents
+ * 
+ * Timeweb provides OpenAI-compatible API for AI agents.
+ * 
+ * IMPORTANT: In Timeweb, the model is selected when creating the agent,
+ * not in each API request. The model parameter in requests is ignored.
+ * Each agent has a pre-configured model that cannot be changed per request.
+ * 
+ * @see https://agent.timeweb.cloud/docs
  */
 export class TimewebApiClient implements IAiAssistant {
   private readonly httpClient: AxiosInstance;
@@ -67,9 +74,11 @@ export class TimewebApiClient implements IAiAssistant {
     });
 
     // Timeweb uses OpenAI-compatible request format
-    // Note: model in request may be ignored, agent's configured model is used
+    // IMPORTANT: Model is configured in the agent settings, not in the request
+    // The model parameter in request is ignored - agent uses its pre-configured model
+    // We still include it for compatibility, but it won't affect which model is used
     const requestBody = {
-      model: model.name,
+      model: model.name, // Included for compatibility, but ignored by Timeweb API
       messages,
       temperature,
       max_tokens: maxTokens,
@@ -77,10 +86,21 @@ export class TimewebApiClient implements IAiAssistant {
     };
 
     try {
-      // Timeweb предоставляет OpenAI-совместимый endpoint
-      // Если baseURL уже содержит /v1, используем /chat/completions
-      // Иначе используем полный путь /v1/chat/completions
-      const endpoint = this.baseURL.includes('/v1') ? '/chat/completions' : '/v1/chat/completions';
+      // Timeweb agent endpoint structure:
+      // baseURL format: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{agent_id}/v1
+      // endpoint should be: /chat/completions (relative to baseURL)
+      // Full URL will be: baseURL + /chat/completions
+      const endpoint = '/chat/completions';
+      
+      // Log for debugging (can be removed later)
+      if (process.env.DEBUG) {
+        console.log('Timeweb API Request:', {
+          baseURL: this.baseURL,
+          endpoint,
+          fullURL: `${this.baseURL}${endpoint}`,
+        });
+      }
+      
       const response = await this.httpClient.post(endpoint, requestBody);
       const choice = response.data?.choices?.[0];
       const content = choice?.message?.content;
@@ -93,8 +113,29 @@ export class TimewebApiClient implements IAiAssistant {
       return content.trim();
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        const message = error.response?.data?.error?.message || error.message;
-        throw new Error(`Ошибка Timeweb: ${message}`);
+        const status = error.response?.status;
+        const statusText = error.response?.statusText;
+        const responseData = error.response?.data;
+        const requestUrl = error.config?.url;
+        const baseURL = error.config?.baseURL;
+        
+        // Enhanced error message with debugging info
+        let errorMessage = `Ошибка Timeweb API`;
+        if (status) {
+          errorMessage += ` (${status} ${statusText || ''})`;
+        }
+        if (responseData?.error?.message) {
+          errorMessage += `: ${responseData.error.message}`;
+        } else if (error.message) {
+          errorMessage += `: ${error.message}`;
+        }
+        
+        // Add URL info for debugging
+        if (baseURL && requestUrl) {
+          errorMessage += `\nURL: ${baseURL}${requestUrl}`;
+        }
+        
+        throw new Error(errorMessage);
       }
       throw error;
     }
@@ -103,14 +144,15 @@ export class TimewebApiClient implements IAiAssistant {
   /**
    * Validates API credentials
    * 
-   * Since Timeweb doesn't have a /models endpoint, we validate
-   * by making a small test request to chat/completions endpoint.
+   * Since Timeweb doesn't have a /models endpoint and model is configured
+   * in agent settings, we can only validate that the API key is present.
+   * A real validation would require making a test request to the agent.
    */
   public async validateCredentials(credentials: ApiCredentials): Promise<boolean> {
     try {
       this.setCredentials(credentials);
-      // Timeweb doesn't have /models endpoint, so we can't validate this way
-      // Just check if API key is set
+      // Timeweb doesn't have /models endpoint for validation
+      // Just check if API key is set (format validation)
       return this.apiKey !== null && this.apiKey.length > 0;
     } catch {
       return false;
@@ -124,14 +166,19 @@ export class TimewebApiClient implements IAiAssistant {
   /**
    * Fetch models from API
    * 
-   * Note: Timeweb API does not provide a models list endpoint.
+   * Timeweb doesn't provide a models list endpoint because:
+   * - Models are selected when creating an agent, not per request
+   * - Each agent has a pre-configured model that cannot be changed
+   * - The model is part of agent configuration, not API request
+   * 
    * This method returns an empty array to indicate that models
    * should be taken from predefined list (getAvailableModels).
    * 
-   * @returns Empty array (Timeweb doesn't support model listing)
+   * @returns Empty array (Timeweb doesn't support model listing via API)
    */
   public async fetchModelsFromApi(): Promise<readonly AiModelDescriptor[]> {
     // Timeweb API does not provide a /models endpoint
+    // Models are configured in agent settings, not via API
     // Return empty array to use predefined models from getAvailableModels()
     return [];
   }
