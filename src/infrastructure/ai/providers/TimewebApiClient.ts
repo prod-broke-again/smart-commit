@@ -93,7 +93,7 @@ export class TimewebApiClient implements IAiAssistant {
       const endpoint = '/chat/completions';
       
       // Log for debugging (can be removed later)
-      if (process.env.DEBUG) {
+      if (process.env['DEBUG']) {
         console.log('Timeweb API Request:', {
           baseURL: this.baseURL,
           endpoint,
