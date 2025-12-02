@@ -29,7 +29,7 @@ smart-commit config --global --set apiKeys.anthropic=sk-ant-...
 
 ## 🔗 Links
 
-- 📖 [Full documentation (English)](docs/README.en.md)
+- 📖 [Full documentation (English)](docs/en/README.md)
 - 📖 [Документация (Русский)](docs/README.md)
 - 🐛 [Report a bug](https://github.com/prod-broke-again/smart-commit/issues)
 - 💡 [Request a feature](https://github.com/prod-broke-again/smart-commit/discussions)

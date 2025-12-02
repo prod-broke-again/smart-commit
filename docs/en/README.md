@@ -5,7 +5,7 @@ Welcome to the Smart Commit AI documentation! Here you'll find all the informati
 ## 📚 Table of Contents
 
 ### 🚀 Getting Started
-- [Installation and Setup](setup.en.md) - First steps with Smart Commit AI
+- [Installation and Setup](setup.md) - First steps with Smart Commit AI
 - [Basic Commands](commands.md) - All available commands and their usage
 
 ### 🚀 Deployment
@@ -13,8 +13,8 @@ Welcome to the Smart Commit AI documentation! Here you'll find all the informati
 - [Regular Deploy](deploy.md) - Full deployment of all commands
 
 ### ⚙️ Configuration
-- [Configuration](configuration.en.md) - Setting up global and project parameters
-- [Configuration (Русский)](configuration.md) - Настройка глобальных и проектных параметров
+- [Configuration](configuration.md) - Setting up global and project parameters
+- [Configuration (Русский)](../configuration.md) - Настройка глобальных и проектных параметров
 
 ### 📊 Examples
 - [Usage Examples](examples.md) - Practical examples for different scenarios
@@ -47,14 +47,14 @@ Welcome to the Smart Commit AI documentation! Here you'll find all the informati
 - ✅ **Project-specific settings**: Each project can override global config
 - ✅ **New provider**: Timeweb AI support added
 
-See [Configuration](configuration.en.md) for details.
+See [Configuration](configuration.md) for details.
 
 ## 🆘 Need Help?
 
 If you have questions or issues:
 
 1. Check [Usage Examples](examples.md)
-2. See [Troubleshooting](setup.en.md#troubleshooting)
+2. See [Troubleshooting](setup.md#troubleshooting)
 3. Create an [Issue](https://github.com/prod-broke-again/smart-commit/issues)
 
 ## 📝 Contributing to Documentation

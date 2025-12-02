@@ -226,7 +226,7 @@ smart-commit
 
 ## 🔗 Useful Links
 
-- [Basic Commands](commands.en.md)
-- [Configuration](configuration.en.md)
-- [Usage Examples](examples.en.md)
+- [Basic Commands](commands.md)
+- [Configuration](configuration.md)
+- [Usage Examples](examples.md)
 
