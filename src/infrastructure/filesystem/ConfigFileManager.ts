@@ -28,6 +28,7 @@ export class ConfigFileManager implements IConfigurationManager {
   public async getGlobalConfig(): Promise<GlobalConfig> {
     const defaultConfig: GlobalConfig = {
       apiKey: null,
+      apiKeys: {},
       defaultModel: 'gpt-5-nano',
       defaultProvider: 'gptunnel',
       maxTokens: 1000,
@@ -69,26 +70,50 @@ export class ConfigFileManager implements IConfigurationManager {
       this.getProjectConfig(),
     ]);
 
-    const merged = { ...globalConfig, ...projectConfig };
+    // Determine provider: project config overrides global
+    const provider = projectConfig.defaultProvider ?? globalConfig.defaultProvider;
+
+    // Determine model: project config overrides global
+    const model = projectConfig.defaultModel ?? globalConfig.defaultModel;
+
+    // Find API key with priority: project apiKey > global apiKeys[provider] > global apiKey (backward compatibility)
+    let apiKey: string | null = null;
+    
+    if (projectConfig.apiKey) {
+      // Project-specific key takes highest priority
+      apiKey = projectConfig.apiKey;
+    } else if (globalConfig.apiKeys && globalConfig.apiKeys[provider]) {
+      // Use key from apiKeys map for the specific provider
+      apiKey = globalConfig.apiKeys[provider];
+    } else if (globalConfig.apiKey) {
+      // Fallback to old apiKey field for backward compatibility
+      apiKey = globalConfig.apiKey;
+    }
 
     // Create API credentials if API key is available
-    const apiCredentials = merged.apiKey
-      ? ApiCredentials.create(merged.apiKey, merged.defaultProvider)
+    const apiCredentials = apiKey
+      ? ApiCredentials.create(apiKey, provider)
       : null;
 
     // Get AI model - try to find it, if not found, create a basic model for this provider
-    let aiModel = AiModel.findByName(merged.defaultModel);
+    let aiModel = AiModel.findByName(model);
     if (!aiModel) {
       // If model not found, create a basic model with default parameters
       // This allows using models that aren't in the static list or API cache
-      aiModel = AiModel.create(merged.defaultModel, merged.defaultProvider, 400000, 0.7);
+      aiModel = AiModel.create(model, provider, 400000, 0.7);
     }
 
-    return {
-      ...merged,
+    // Merge configs (project overrides global)
+    const merged: MergedConfig = {
+      ...globalConfig,
+      ...projectConfig,
+      defaultProvider: provider,
+      defaultModel: model,
       apiCredentials,
       aiModel,
     };
+
+    return merged;
   }
 
   public async saveGlobalConfig(config: Partial<GlobalConfig>): Promise<void> {
@@ -113,10 +138,24 @@ export class ConfigFileManager implements IConfigurationManager {
 
     const cfg = config as Record<string, unknown>;
 
-    // Validate API key if present
+    // Validate API key if present (backward compatibility)
     if (cfg['apiKey'] !== undefined && cfg['apiKey'] !== null) {
       if (typeof cfg['apiKey'] !== 'string' || cfg['apiKey'].length < 10) {
         errors.push('API key must be a string with at least 10 characters');
+      }
+    }
+
+    // Validate apiKeys object if present
+    if (cfg['apiKeys'] !== undefined) {
+      if (typeof cfg['apiKeys'] !== 'object' || Array.isArray(cfg['apiKeys']) || cfg['apiKeys'] === null) {
+        errors.push('apiKeys must be an object');
+      } else {
+        const apiKeys = cfg['apiKeys'] as Record<string, unknown>;
+        for (const [provider, key] of Object.entries(apiKeys)) {
+          if (typeof key !== 'string' || key.length < 10) {
+            errors.push(`API key for provider "${provider}" must be a string with at least 10 characters`);
+          }
+        }
       }
     }
 

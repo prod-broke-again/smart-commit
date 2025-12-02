@@ -456,18 +456,26 @@ export class SmartCommitCli {
 
     // Check if API key is already configured
     const globalConfig = await this.configManager.getGlobalConfig();
+    const hasApiKey = globalConfig.apiKey || (globalConfig.apiKeys && Object.keys(globalConfig.apiKeys).length > 0);
 
-    if (!globalConfig.apiKey) {
+    if (!hasApiKey) {
       console.log(chalk.yellow('API key not configured.'));
-      console.log('Get your API key from https://gptunnel.ru/profile/business');
+      console.log('Get your API key from your provider');
       console.log();
 
       // In a real implementation, you might use readline for interactive input
       console.log(chalk.cyan('Run the following command to set your API key:'));
       console.log(chalk.green('smart-commit config --global --set apiKey=YOUR_API_KEY'));
+      console.log(chalk.green('  or for specific provider:'));
+      console.log(chalk.green('smart-commit config --global --set apiKeys.openai=YOUR_OPENAI_KEY'));
+      console.log(chalk.green('smart-commit config --global --set apiKeys.timeweb=YOUR_TIMEWEB_KEY'));
       console.log();
     } else {
       console.log(chalk.green('✓ API key is configured'));
+      if (globalConfig.apiKeys && Object.keys(globalConfig.apiKeys).length > 0) {
+        const providers = Object.keys(globalConfig.apiKeys).join(', ');
+        console.log(chalk.cyan(`  Configured providers: ${providers}`));
+      }
     }
 
     // Check current directory
@@ -510,9 +518,22 @@ export class SmartCommitCli {
 
   private printConfig(config: Record<string, unknown>): void {
     for (const [key, value] of Object.entries(config)) {
-      const displayValue = key.includes('apiKey') && typeof value === 'string'
-        ? this.maskApiKey(value)
-        : String(value);
+      let displayValue: string;
+      
+      if (key === 'apiKeys' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        // Special handling for apiKeys object
+        const apiKeys = value as Record<string, string>;
+        const maskedKeys: string[] = [];
+        for (const [provider, keyValue] of Object.entries(apiKeys)) {
+          maskedKeys.push(`${provider}: ${this.maskApiKey(keyValue)}`);
+        }
+        displayValue = `{ ${maskedKeys.join(', ')} }`;
+      } else if (key.includes('apiKey') && typeof value === 'string') {
+        displayValue = this.maskApiKey(value);
+      } else {
+        displayValue = String(value);
+      }
+      
       console.log(`  ${key}: ${displayValue}`);
     }
   }

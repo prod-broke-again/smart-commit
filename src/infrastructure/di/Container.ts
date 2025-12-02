@@ -12,7 +12,6 @@ import { WorkflowOrchestrator } from '../../application/services/WorkflowOrchest
 import { ModelManager } from '../../application/services/ModelManager';
 import { ProjectAnalyzer } from '../../application/services/ProjectAnalyzer';
 import { ServerCommandExecutor } from '../../application/services/ServerCommandExecutor';
-import { ApiCredentials } from '../../domain/value-objects/ApiCredentials';
 
 /**
  * Dependency injection container
@@ -63,16 +62,12 @@ export class Container {
     const gitAnalyzer = new GitOperations();
     const configManager = new ConfigFileManager();
 
-    // Get global config to determine wallet balance setting
-    const globalConfig = await configManager.getGlobalConfig();
+    // Get merged config (project config overrides global)
+    const mergedConfig = await configManager.getMergedConfig();
 
-    const credentials = globalConfig.apiKey
-      ? ApiCredentials.create(globalConfig.apiKey, globalConfig.defaultProvider)
-      : null;
-
-    const aiAssistant = AiProviderFactory.create(globalConfig.defaultProvider, {
-      credentials,
-      useWalletBalance: globalConfig.useWalletBalance,
+    const aiAssistant = AiProviderFactory.create(mergedConfig.defaultProvider, {
+      credentials: mergedConfig.apiCredentials ?? null,
+      useWalletBalance: mergedConfig['useWalletBalance'] as boolean ?? true,
     });
 
     this.registerSingleton<IGitAnalyzer>('IGitAnalyzer', gitAnalyzer);

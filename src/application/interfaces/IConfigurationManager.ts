@@ -23,24 +23,27 @@ export interface IConfigurationManager {
   /**
    * Saves global configuration
    */
-  saveGlobalConfig(config: Partial<GlobalConfig>): Promise<void>;
+  saveGlobalConfig(_config: Partial<GlobalConfig>): Promise<void>;
 
   /**
    * Saves project configuration
    */
-  saveProjectConfig(config: Partial<ProjectConfig>): Promise<void>;
+  saveProjectConfig(_config: Partial<ProjectConfig>): Promise<void>;
 
   /**
    * Validates configuration
    */
-  validateConfig(config: unknown): ConfigValidationResult;
+  validateConfig(_config: unknown): ConfigValidationResult;
 }
 
 /**
  * Global configuration (user-specific)
  */
 export interface GlobalConfig {
-  readonly apiKey: string | null;
+  /** @deprecated Use apiKeys instead. Kept for backward compatibility */
+  readonly apiKey?: string | null;
+  /** API keys for different providers: { "openai": "key1", "timeweb": "key2", ... } */
+  readonly apiKeys?: Record<string, string>;
   readonly defaultModel: string;
   readonly defaultProvider: string;
   readonly maxTokens: number;
@@ -61,14 +64,23 @@ export interface ProjectConfig {
   readonly includeScope: boolean;
   readonly conventionalCommitsOnly: boolean;
   readonly customInstructions: string | null;
+  /** Project-specific API key (overrides global for this project) */
+  readonly apiKey?: string | null;
+  /** Project-specific provider (overrides global for this project) */
+  readonly defaultProvider?: string | null;
+  /** Project-specific model (overrides global for this project) */
+  readonly defaultModel?: string | null;
 }
 
 /**
  * Merged configuration (global + project)
+ * After merging, defaultModel and defaultProvider are always defined (from global if not in project)
  */
-export interface MergedConfig extends GlobalConfig, ProjectConfig {
+export interface MergedConfig extends Omit<GlobalConfig, 'defaultModel' | 'defaultProvider'>, Omit<ProjectConfig, 'defaultModel' | 'defaultProvider' | 'apiKey'> {
   readonly apiCredentials: ApiCredentials | null;
   readonly aiModel: AiModel;
+  readonly defaultModel: string; // Always defined after merge
+  readonly defaultProvider: string; // Always defined after merge
   readonly [key: string]: unknown;
 }
 

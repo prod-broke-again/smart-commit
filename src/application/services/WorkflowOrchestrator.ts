@@ -49,16 +49,16 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
       const stagedChanges = await this.gitAnalyzer.getStagedChanges();
 
       // Get diff if full analysis mode is enabled
-      const diff = config.analysisMode === 'full' ? await this.gitAnalyzer.getStagedDiff() : undefined;
+      const diff = config['analysisMode'] === 'full' ? await this.gitAnalyzer.getStagedDiff() : undefined;
 
       // Generate commit message
       const generationOptions: CommitGenerationOptions = {
         model: config.aiModel,
-        language: config.language,
+        language: config['language'] as string,
         maxLength: config.maxCommitLength,
         includeScope: config.includeScope,
         customInstructions: config.customInstructions,
-        analysisMode: config.analysisMode,
+        analysisMode: config['analysisMode'] as 'lite' | 'full',
       };
 
       const commitMessage = await this.commitGenerator.generateCommitMessage(
@@ -117,16 +117,16 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
       const config = await this.configManager.getMergedConfig();
 
       // Get diff if full analysis mode is enabled
-      const diff = config.analysisMode === 'full' ? await this.gitAnalyzer.getStagedDiff() : undefined;
+      const diff = config['analysisMode'] === 'full' ? await this.gitAnalyzer.getStagedDiff() : undefined;
 
       // Generate commit message
       const generationOptions: CommitGenerationOptions = {
         model: config.aiModel,
-        language: config.language,
+        language: config['language'] as string,
         maxLength: config.maxCommitLength,
         includeScope: config.includeScope,
         customInstructions: config.customInstructions,
-        analysisMode: config.analysisMode,
+        analysisMode: config['analysisMode'] as 'lite' | 'full',
       };
 
       const commitMessage = await this.commitGenerator.generateCommitMessage(
@@ -184,16 +184,16 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
       const config = await this.configManager.getMergedConfig();
 
       // Get diff if full analysis mode is enabled
-      const diff = config.analysisMode === 'full' ? await this.gitAnalyzer.getStagedDiff() : undefined;
+      const diff = config['analysisMode'] === 'full' ? await this.gitAnalyzer.getStagedDiff() : undefined;
 
       // Generate commit message
       const generationOptions: CommitGenerationOptions = {
         model: config.aiModel,
-        language: config.language,
+        language: config['language'] as string,
         maxLength: config.maxCommitLength,
         includeScope: config.includeScope,
         customInstructions: config.customInstructions,
-        analysisMode: config.analysisMode,
+        analysisMode: config['analysisMode'] as 'lite' | 'full',
       };
 
       const commitMessage = await this.commitGenerator.generateCommitMessage(

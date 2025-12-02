@@ -134,6 +134,10 @@ export class AiModel {
   public static readonly GEMINI_1_5_FLASH = AiModel.create('gemini-1.5-flash-latest', 'gemini', 1048576, 0.7, true);
   public static readonly GEMINI_PRO = AiModel.create('gemini-pro', 'gemini', 32000, 0.7, true);
 
+  public static readonly TIMEWEB_GPT_4O = AiModel.create('gpt-4o', 'timeweb', 128000, 0.7, true);
+  public static readonly TIMEWEB_GPT_4O_MINI = AiModel.create('gpt-4o-mini', 'timeweb', 128000, 0.7, true);
+  public static readonly TIMEWEB_GPT_3_5_TURBO = AiModel.create('gpt-3.5-turbo', 'timeweb', 16385, 0.7, true);
+
   private static readonly DEFAULT_MODELS: Record<string, readonly AiModel[]> = Object.freeze({
     gptunnel: Object.freeze([
       AiModel.GPT_3_5_TURBO,
@@ -156,6 +160,11 @@ export class AiModel {
       AiModel.GEMINI_1_5_PRO,
       AiModel.GEMINI_1_5_FLASH,
       AiModel.GEMINI_PRO,
+    ]),
+    timeweb: Object.freeze([
+      AiModel.TIMEWEB_GPT_4O,
+      AiModel.TIMEWEB_GPT_4O_MINI,
+      AiModel.TIMEWEB_GPT_3_5_TURBO,
     ]),
   });
 

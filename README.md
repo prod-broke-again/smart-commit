@@ -8,9 +8,29 @@
 
 Global AI-powered tool for generating meaningful commit messages and running smart deployment workflows.
 
+## ⚠️ Important Configuration Update
+
+**Version 1.0.13** introduces support for multiple API keys for different providers and project-specific settings.
+
+- ⚠️ **`apiKey` is deprecated** — use `apiKeys` to store keys for different providers
+- ✅ **New feature**: Store keys for all providers simultaneously (`apiKeys.openai`, `apiKeys.timeweb`, etc.)
+- ✅ **Project settings**: Each project can have its own `apiKey`, `defaultProvider`, and `defaultModel`
+- ✅ **New provider**: Timeweb AI support added
+
+```bash
+# Old way (still works, but deprecated)
+smart-commit config --global --set apiKey=YOUR_KEY
+
+# New way (recommended)
+smart-commit config --global --set apiKeys.openai=sk-...
+smart-commit config --global --set apiKeys.timeweb=tw-...
+smart-commit config --global --set apiKeys.anthropic=sk-ant-...
+```
+
 ## 🔗 Links
 
-- 📖 [Full documentation](docs/README.md)
+- 📖 [Full documentation (English)](docs/README.en.md)
+- 📖 [Документация (Русский)](docs/README.md)
 - 🐛 [Report a bug](https://github.com/prod-broke-again/smart-commit/issues)
 - 💡 [Request a feature](https://github.com/prod-broke-again/smart-commit/discussions)
 - 🤝 [Contribution guide](https://github.com/prod-broke-again/smart-commit/blob/main/CONTRIBUTING.md)
@@ -85,8 +105,15 @@ Continue? [y/N]
 All settings can be stored globally (`~/.smart-commit/config.json`) or per-project (`.smart-commit.json`).
 
 ```bash
-# Set API key
-smart-commit config --global --set apiKey=YOUR_API_KEY
+# Set API keys for different providers (recommended)
+smart-commit config --global --set apiKeys.openai=sk-...
+smart-commit config --global --set apiKeys.timeweb=tw-...
+smart-commit config --global --set apiKeys.anthropic=sk-ant-...
+
+# Set project-specific settings (overrides global)
+smart-commit config --set apiKey=project-key
+smart-commit config --set defaultProvider=timeweb
+smart-commit config --set defaultModel=gpt-4o-mini
 
 # Switch analysis mode
 smart-commit config --global --set analysisMode=full
@@ -100,7 +127,7 @@ smart-commit config --global --list
 
 ## 🔧 Models & Providers
 
-Smart Commit supports multiple AI providers (GPTunnel, OpenAI, Anthropic Claude, Google Gemini). Manage models via CLI:
+Smart Commit supports multiple AI providers (GPTunnel, OpenAI, Anthropic Claude, Google Gemini, Timeweb AI). Manage models via CLI:
 
 ```bash
 # List models from current provider
@@ -148,4 +175,4 @@ Smart Commit is released under the [MIT License](LICENSE).
 ---
 
 Made with ❤️ by [Eugene (prod-broke-again)](https://github.com/prod-broke-again)  
-Version: 1.0.11
+Version: 1.0.13

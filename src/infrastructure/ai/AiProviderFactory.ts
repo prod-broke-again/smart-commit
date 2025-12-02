@@ -4,6 +4,7 @@ import { GptunnelApiClient } from './GptunnelApiClient';
 import { OpenAiApiClient } from './providers/OpenAiApiClient';
 import { AnthropicApiClient } from './providers/AnthropicApiClient';
 import { GeminiApiClient } from './providers/GeminiApiClient';
+import { TimewebApiClient } from './providers/TimewebApiClient';
 
 export interface AiProviderFactoryOptions {
   readonly credentials?: ApiCredentials | null;
@@ -30,6 +31,9 @@ export class AiProviderFactory {
       case 'gemini':
       case 'google':
         assistant = new GeminiApiClient(baseUrls['gemini']);
+        break;
+      case 'timeweb':
+        assistant = new TimewebApiClient(baseUrls['timeweb']);
         break;
       case 'gptunnel':
       default:

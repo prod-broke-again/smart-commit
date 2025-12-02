@@ -19,9 +19,17 @@ Smart Commit использует два уровня конфигурации:
 ```json
 {
   "apiKey": "your-api-key",
+  "apiKeys": {
+    "openai": "sk-...",
+    "timeweb": "tw-...",
+    "anthropic": "sk-ant-...",
+    "gemini": "..."
+  },
   "defaultProvider": "gptunnel",
+  "defaultModel": "gpt-4o-mini",
   "language": "ru",
-  "aiModel": "gpt-4",
+  "maxTokens": 1000,
+  "temperature": 0.7,
   "maxCommitLength": 72,
   "includeScope": true,
   "analysisMode": "full",
@@ -34,15 +42,36 @@ Smart Commit использует два уровня конфигурации:
 
 | Параметр | Описание | Возможные значения | По умолчанию |
 |----------|----------|-------------------|--------------|
-| `apiKey` | API ключ для ИИ | Строка | - |
-| `defaultProvider` | Провайдер ИИ | `gptunnel`, `openai` | `gptunnel` |
-| `language` | Язык коммитов | `ru`, `en` | `ru` |
-| `aiModel` | Модель ИИ | `gpt-4`, `gpt-3.5-turbo` | `gpt-4` |
+| `apiKey` | ⚠️ **Устарел** - API ключ для ИИ (для обратной совместимости) | Строка | - |
+| `apiKeys` | ✅ **Рекомендуется** - API ключи для разных провайдеров | Объект `{ "provider": "key" }` | `{}` |
+| `defaultProvider` | Провайдер ИИ | `gptunnel`, `openai`, `anthropic`, `claude`, `gemini`, `google`, `timeweb` | `gptunnel` |
+| `defaultModel` | Модель ИИ | Зависит от провайдера | `gpt-5-nano` |
+| `language` | Язык коммитов | `ru`, `en` | `en` |
+| `maxTokens` | Максимальное количество токенов | Число | `1000` |
+| `temperature` | Температура генерации | `0-2` | `0.7` |
 | `maxCommitLength` | Максимальная длина коммита | `50-100` | `72` |
-| `includeScope` | Включать scope в коммиты | `true`, `false` | `true` |
-| `analysisMode` | Режим анализа | `basic`, `full` | `full` |
+| `includeScope` | Включать scope в коммиты | `true`, `false` | `false` |
+| `analysisMode` | Режим анализа | `lite`, `full` | `lite` |
 | `customInstructions` | Кастомные инструкции | Любой текст | - |
-| `useWalletBalance` | Использовать баланс кошелька | `true`, `false` | `false` |
+| `useWalletBalance` | Использовать баланс кошелька (только для gptunnel) | `true`, `false` | `true` |
+
+### ⚠️ Важно: Миграция с apiKey на apiKeys
+
+Если вы используете старый формат с одним `apiKey`, рекомендуется мигрировать на новый формат:
+
+```bash
+# Старый способ (все еще работает)
+smart-commit config --global --set apiKey=YOUR_KEY
+
+# Новый способ (рекомендуется)
+smart-commit config --global --set apiKeys.openai=sk-...
+smart-commit config --global --set apiKeys.timeweb=tw-...
+```
+
+**Приоритет выбора ключа:**
+1. Проектный `apiKey` (если указан в `.smart-commit.json`)
+2. Глобальный `apiKeys[provider]` (ключ для конкретного провайдера)
+3. Глобальный `apiKey` (для обратной совместимости)
 
 ## 📁 Конфигурация проекта
 
@@ -54,8 +83,10 @@ Smart Commit использует два уровня конфигурации:
 
 ```json
 {
+  "apiKey": "project-specific-key",
+  "defaultProvider": "timeweb",
+  "defaultModel": "gpt-4o-mini",
   "language": "ru",
-  "aiModel": "gpt-4",
   "maxCommitLength": 72,
   "includeScope": true,
   "analysisMode": "full",
@@ -108,11 +139,49 @@ smart-commit config --get language
 # Установить значение
 smart-commit config --set language=ru
 
-# Установить глобально
+# Установить глобально (старый способ - устарел)
 smart-commit config --global --set apiKey=your-key
 
-# Установить для проекта
+# Установить ключи для разных провайдеров (новый способ - рекомендуется)
+smart-commit config --global --set apiKeys.openai=sk-...
+smart-commit config --global --set apiKeys.timeweb=tw-...
+smart-commit config --global --set apiKeys.anthropic=sk-ant-...
+
+# Установить для проекта (переопределяет глобальные настройки)
 smart-commit config --set maxCommitLength=50
+smart-commit config --set apiKey=project-key
+smart-commit config --set defaultProvider=timeweb
+smart-commit config --set defaultModel=gpt-4o-mini
+```
+
+### Примеры настройки для разных провайдеров
+
+#### OpenAI
+```bash
+smart-commit config --global --set apiKeys.openai=sk-...
+smart-commit config --global --set defaultProvider=openai
+smart-commit config --global --set defaultModel=gpt-4o-mini
+```
+
+#### Timeweb AI
+```bash
+smart-commit config --global --set apiKeys.timeweb=tw-...
+smart-commit config --global --set defaultProvider=timeweb
+smart-commit config --global --set defaultModel=gpt-4o-mini
+```
+
+#### Anthropic Claude
+```bash
+smart-commit config --global --set apiKeys.anthropic=sk-ant-...
+smart-commit config --global --set defaultProvider=anthropic
+smart-commit config --global --set defaultModel=claude-3-5-sonnet-20241022
+```
+
+#### Google Gemini
+```bash
+smart-commit config --global --set apiKeys.gemini=...
+smart-commit config --global --set defaultProvider=gemini
+smart-commit config --global --set defaultModel=gemini-1.5-flash-latest
 ```
 
 ### Генерация конфигурации проекта
