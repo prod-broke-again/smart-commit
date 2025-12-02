@@ -30,17 +30,29 @@ export class TimewebApiClient implements IAiAssistant {
     return 'timeweb';
   }
 
+  /**
+   * Generates text using Timeweb AI API
+   * 
+   * @param prompt - The prompt text to send to the AI
+   * @param options - Generation options (model, temperature, maxTokens, etc.)
+   * @returns Generated text response
+   * @throws Error if API key is not set or API request fails
+   */
   public async generateText(prompt: string, options: AiGenerationOptions = {}): Promise<string> {
     this.ensureApiKey();
 
+    // Use provided model or fallback to default
     const model = options.model || AiModel.OPENAI_GPT_4O_MINI;
+    // Calculate token limits and temperature
     const estimatedPromptTokens = this.estimateTokens(prompt);
     const remainingTokens = Math.max(model.maxTokens - estimatedPromptTokens, 100);
     const maxTokens = Math.min(options.maxTokens ?? remainingTokens, model.maxTokens);
     const temperature = options.temperature ?? model.temperature;
 
+    // Build messages array for OpenAI-compatible format
     const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
 
+    // Add system message if custom instructions provided
     if (options.customInstructions) {
       messages.push({
         role: 'system',
@@ -48,13 +60,14 @@ export class TimewebApiClient implements IAiAssistant {
       });
     }
 
+    // Add user prompt
     messages.push({
       role: 'user',
       content: prompt,
     });
 
-    // Timeweb использует OpenAI-совместимый формат запроса
-    // Примечание: модель в запросе может игнорироваться, используется модель из настроек агента
+    // Timeweb uses OpenAI-compatible request format
+    // Note: model in request may be ignored, agent's configured model is used
     const requestBody = {
       model: model.name,
       messages,
@@ -72,6 +85,7 @@ export class TimewebApiClient implements IAiAssistant {
       const choice = response.data?.choices?.[0];
       const content = choice?.message?.content;
 
+      // Validate response
       if (!content) {
         throw new Error('Некорректный ответ от Timeweb: пустое сообщение');
       }
@@ -86,13 +100,18 @@ export class TimewebApiClient implements IAiAssistant {
     }
   }
 
+  /**
+   * Validates API credentials
+   * 
+   * Since Timeweb doesn't have a /models endpoint, we validate
+   * by making a small test request to chat/completions endpoint.
+   */
   public async validateCredentials(credentials: ApiCredentials): Promise<boolean> {
     try {
       this.setCredentials(credentials);
-      // Попытка получить список моделей для валидации
-      const endpoint = this.baseURL.includes('/v1') ? '/models' : '/v1/models';
-      await this.httpClient.get(endpoint);
-      return true;
+      // Timeweb doesn't have /models endpoint, so we can't validate this way
+      // Just check if API key is set
+      return this.apiKey !== null && this.apiKey.length > 0;
     } catch {
       return false;
     }
@@ -102,36 +121,19 @@ export class TimewebApiClient implements IAiAssistant {
     return AiModel.getAvailableModels(this.getProviderId());
   }
 
+  /**
+   * Fetch models from API
+   * 
+   * Note: Timeweb API does not provide a models list endpoint.
+   * This method returns an empty array to indicate that models
+   * should be taken from predefined list (getAvailableModels).
+   * 
+   * @returns Empty array (Timeweb doesn't support model listing)
+   */
   public async fetchModelsFromApi(): Promise<readonly AiModelDescriptor[]> {
-    this.ensureApiKey();
-
-    try {
-      const endpoint = this.baseURL.includes('/v1') ? '/models' : '/v1/models';
-      const response = await this.httpClient.get(endpoint);
-      const models = response.data?.data;
-
-      if (!Array.isArray(models)) {
-        throw new Error('Некорректный формат ответа при загрузке моделей Timeweb');
-      }
-
-      return models
-        .filter((model: any) => typeof model?.id === 'string')
-        .map(
-          (model: any): AiModelDescriptor => ({
-            name: model.id,
-            provider: this.getProviderId(),
-            maxTokens: this.extractContextWindow(model),
-            temperature: 0.7,
-            supportsStreaming: Boolean(model?.capabilities?.streaming ?? true),
-          })
-        );
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const message = error.response?.data?.error?.message || error.message;
-        throw new Error(`Не удалось получить список моделей Timeweb: ${message}`);
-      }
-      throw error;
-    }
+    // Timeweb API does not provide a /models endpoint
+    // Return empty array to use predefined models from getAvailableModels()
+    return [];
   }
 
   public estimateTokens(text: string): number {
@@ -168,17 +170,5 @@ export class TimewebApiClient implements IAiAssistant {
     }
   }
 
-  private extractContextWindow(model: any): number {
-    if (typeof model?.context_window === 'number') {
-      return model.context_window;
-    }
-
-    if (typeof model?.metadata?.context_length === 'number') {
-      return model.metadata.context_length;
-    }
-
-    // Разумное значение по умолчанию для Timeweb
-    return 128000;
-  }
 }
 

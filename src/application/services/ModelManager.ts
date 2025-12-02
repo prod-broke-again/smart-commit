@@ -129,6 +129,10 @@ export class ModelManager {
 
   /**
    * Fetch models from API and save to cache
+   * 
+   * Some providers (like Timeweb) don't support model listing.
+   * If fetchModelsFromApi returns empty array, we skip caching
+   * and use predefined models from getAvailableModels().
    */
   private async fetchAndCacheModels(provider: string): Promise<void> {
     if (typeof this.aiAssistant.fetchModelsFromApi !== 'function') {
@@ -136,6 +140,13 @@ export class ModelManager {
     }
 
     const models = await this.aiAssistant.fetchModelsFromApi() as readonly AiModelDescriptor[];
+    
+    // If provider doesn't support model listing (returns empty array),
+    // skip caching and use predefined models
+    if (models.length === 0) {
+      return;
+    }
+    
     const descriptors = models.map(model => ({
       ...model,
       provider: model.provider.toLowerCase(),
