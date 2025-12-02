@@ -92,14 +92,14 @@ export class TimewebApiClient implements IAiAssistant {
       stop: options.stopSequences,
     };
 
+    // Timeweb agent endpoint structure (based on PHP implementation):
+    // baseURL: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{agent_id}/v1
+    // endpoint: /chat/completions
+    // Full URL: baseURL + /chat/completions
+    // Example: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{agent_id}/v1/chat/completions
+    const endpoint = '/chat/completions';
+    
     try {
-      // Timeweb agent endpoint structure (based on PHP implementation):
-      // baseURL: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{agent_id}/v1
-      // endpoint: /chat/completions
-      // Full URL: baseURL + /chat/completions
-      // Example: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{agent_id}/v1/chat/completions
-      const endpoint = '/chat/completions';
-      
       // Log for debugging
       if (process.env['DEBUG']) {
         console.log('Timeweb API Request:', {
