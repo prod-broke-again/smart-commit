@@ -4,6 +4,18 @@ import { AiModel } from '../../domain/entities/AiModel';
 
 /**
  * Service for validating and improving commit messages
+ * 
+ * Validates commit messages against conventional commits format and
+ * optionally improves them using AI assistant.
+ * 
+ * @example
+ * ```typescript
+ * const validator = new CommitMessageValidator(aiAssistant);
+ * const result = await validator.validateAndImprove('fix bug', {
+ *   autoImprove: true,
+ *   language: 'en'
+ * });
+ * ```
  */
 export class CommitMessageValidator {
   private readonly format: ConventionalCommitFormat;
@@ -48,14 +60,16 @@ export class CommitMessageValidator {
         temperature: 0.7,
       });
 
-      // Extract improved message (AI might add explanations)
+      // Extract improved message (AI might add explanations or metadata)
+      // Look for a line that matches conventional commit format
       const lines = improved.split('\n');
-      const improvedMessage = lines.find(line => 
-        line.trim() && 
-        !line.toLowerCase().includes('improved') &&
-        !line.toLowerCase().includes('suggestion') &&
-        /^\w+(\(.+\))?!?:/.test(line.trim())
-      ) || lines[0]?.trim() || message;
+      const improvedMessage = lines.find(line => {
+        const trimmed = line.trim();
+        return trimmed && 
+          !trimmed.toLowerCase().includes('improved') &&
+          !trimmed.toLowerCase().includes('suggestion') &&
+          /^\w+(\(.+\))?!?:/.test(trimmed);
+      }) || lines[0]?.trim() || message;
 
       return improvedMessage.trim();
     } catch (error) {

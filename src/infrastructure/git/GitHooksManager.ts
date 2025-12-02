@@ -7,6 +7,15 @@ const execAsync = promisify(exec);
 
 /**
  * Manages Git hooks installation and configuration
+ * 
+ * Provides functionality to install, uninstall, and check Git hooks.
+ * Currently supports commit-msg hook for automatic commit message validation.
+ * 
+ * @example
+ * ```typescript
+ * const hooksManager = new GitHooksManager();
+ * await hooksManager.installCommitMsgHook();
+ * ```
  */
 export class GitHooksManager {
   private readonly hooksDir: string;
@@ -74,31 +83,42 @@ export class GitHooksManager {
 
   /**
    * Gets path to smart-commit binary
+   * 
+   * Determines the correct path to smart-commit executable based on:
+   * 1. If running via npm/npx, use npx command
+   * 2. If installed locally, use local node_modules path
+   * 3. Otherwise, assume global installation
+   * 
+   * @returns Path or command to smart-commit binary
    */
   private getSmartCommitPath(): string {
-    // Try to find smart-commit in PATH
-    // In production, it will be in node_modules/.bin or globally installed
-    // For development, we can use npx
+    // Check if running via npm/npx (development or local install)
     if (process.env['npm_execpath']) {
-      // Running via npm/npx
       return 'npx smart-commit-ai';
     }
 
-    // Try to find in node_modules
+    // Check for local installation in node_modules
     const localPath = path.join(process.cwd(), 'node_modules', '.bin', 'smart-commit');
     if (fs.existsSync(localPath)) {
       return localPath;
     }
 
-    // Default to global installation
+    // Default to global installation (assumes smart-commit is in PATH)
     return 'smart-commit';
   }
 
   /**
    * Generates commit-msg hook script
+   * 
+   * Creates a Node.js script that will be executed by Git when a commit
+   * message is being created. The script validates and improves the
+   * commit message using smart-commit.
+   * 
+   * @param smartCommitPath - Path or command to smart-commit binary
+   * @returns Hook script content as string
    */
   private generateCommitMsgHook(smartCommitPath: string): string {
-    // Use cross-platform approach
+    // Use cross-platform Node.js approach for maximum compatibility
     return `#!/usr/bin/env node
 /**
  * Smart Commit AI - commit-msg hook

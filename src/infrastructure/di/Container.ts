@@ -15,6 +15,16 @@ import { ServerCommandExecutor } from '../../application/services/ServerCommandE
 
 /**
  * Dependency injection container
+ * 
+ * Implements singleton pattern for managing application services.
+ * Provides centralized service registration and retrieval.
+ * 
+ * @example
+ * ```typescript
+ * const container = Container.getInstance();
+ * await container.initialize();
+ * const gitAnalyzer = container.gitAnalyzer;
+ * ```
  */
 export class Container {
   private static instance: Container;

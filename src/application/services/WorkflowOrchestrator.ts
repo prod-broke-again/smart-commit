@@ -243,9 +243,15 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
 
       // Validate message format if required
       if (!_options.skipValidation) {
-        const config = await this.configManager.getProjectConfig();
+        const config = await this.configManager.getMergedConfig();
         if (config.conventionalCommitsOnly) {
-          // TODO: Add validation logic
+          const { ConventionalCommitFormat } = await import('../../domain/value-objects/ConventionalCommitFormat');
+          const format = ConventionalCommitFormat.STANDARD;
+          const validation = format.validate(message);
+          
+          if (!validation.isValid) {
+            throw new Error(`Commit message does not follow conventional commits format:\n${validation.errors.join('\n')}`);
+          }
         }
       }
 
