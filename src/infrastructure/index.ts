@@ -1,5 +1,6 @@
 // Git infrastructure
 export { GitOperations } from './git/GitOperations';
+export { GitHooksManager } from './git/GitHooksManager';
 
 // AI infrastructure
 export { GptunnelApiClient } from './ai/GptunnelApiClient';

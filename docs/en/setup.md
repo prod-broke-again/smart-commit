@@ -153,6 +153,21 @@ Change settings:
 smart-commit config --set key=value
 ```
 
+## 🔗 Git Hooks (Recommended)
+
+Install Git hooks to automatically validate and improve commit messages:
+
+```bash
+smart-commit install-hooks
+```
+
+After installation:
+- Every `git commit` will be automatically validated
+- Invalid messages will be improved using AI
+- Commits not following conventional format will be prevented
+
+This works seamlessly with your existing workflow - just use `git commit` as usual!
+
 ## 🔄 Update
 
 ```bash

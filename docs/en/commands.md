@@ -182,6 +182,37 @@ smart-commit --generate-only
 smart-commit config --list
 ```
 
+## 🔗 Git Hooks
+
+### Installing Hooks
+
+```bash
+# Install commit-msg hook for automatic validation
+smart-commit install-hooks
+```
+
+After installation, every `git commit` will automatically:
+- Validate commit message format
+- Improve message using AI if needed
+- Prevent commits that don't follow conventional commits format
+
+### Uninstalling Hooks
+
+```bash
+# Remove Git hooks
+smart-commit uninstall-hooks
+```
+
+### How It Works
+
+When you run `git commit -m "fix bug"`, the hook will:
+1. Validate the message format
+2. If invalid, try to improve it using AI
+3. Replace the message with improved version
+4. If improvement fails, show errors and prevent commit
+
+You can skip hooks with `git commit --no-verify` if needed.
+
 ## 🔗 Useful Links
 
 - [Installation and Setup](setup.md)

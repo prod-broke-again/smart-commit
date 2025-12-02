@@ -39,6 +39,7 @@ smart-commit config --global --set apiKeys.anthropic=sk-ant-...
 
 - 🤖 **AI-powered commits**: Generate high-quality commit messages with GPT models
 - 📋 **Conventional Commits**: Fully supports the conventional commits format
+- 🔗 **Git Hooks**: Automatic validation and improvement of commit messages
 - 🌍 **Multi-language**: Works in English and Russian out of the box
 - 🔧 **Smart deploy**: Detects necessary commands based on changed files
 - ⚡ **Fast deploy**: Run the full set of deployment commands when needed
@@ -99,6 +100,8 @@ Continue? [y/N]
 | `smart-commit setup` | Initial configuration wizard |
 | `smart-commit config` | Manage config (global or project) |
 | `smart-commit models` | Manage AI models cache |
+| `smart-commit install-hooks` | Install Git hooks for automatic validation |
+| `smart-commit uninstall-hooks` | Uninstall Git hooks |
 
 ## ⚙️ Configuration
 
@@ -175,4 +178,4 @@ Smart Commit is released under the [MIT License](LICENSE).
 ---
 
 Made with ❤️ by [Eugene (prod-broke-again)](https://github.com/prod-broke-again)  
-Version: 1.0.13
+Version: 1.0.14

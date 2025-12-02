@@ -551,6 +551,65 @@ export class SmartCommitCli {
   }
 
   /**
+   * Install Git hooks
+   */
+  public async installHooks(): Promise<void> {
+    await this.initialize();
+    
+    const { GitHooksManager } = await import('../infrastructure/git/GitHooksManager');
+    const hooksManager = new GitHooksManager();
+    
+    await hooksManager.installCommitMsgHook();
+  }
+
+  /**
+   * Uninstall Git hooks
+   */
+  public async uninstallHooks(): Promise<void> {
+    await this.initialize();
+    
+    const { GitHooksManager } = await import('../infrastructure/git/GitHooksManager');
+    const hooksManager = new GitHooksManager();
+    
+    await hooksManager.uninstallCommitMsgHook();
+  }
+
+  /**
+   * Handle commit-msg hook
+   */
+  public async handleCommitMsgHook(commitMsgFile: string): Promise<void> {
+    await this.initialize();
+    
+    const fs = await import('fs-extra');
+    const commitMessage = await fs.readFile(commitMsgFile, 'utf-8');
+    
+    const config = await this.configManager.getMergedConfig();
+    const { CommitMessageValidator } = await import('../application/services/CommitMessageValidator');
+    const aiAssistant = this.container.get<IAiAssistant>('IAiAssistant');
+    const validator = new CommitMessageValidator(aiAssistant);
+    
+    const result = await validator.validateAndImprove(commitMessage.trim(), {
+      autoImprove: true,
+      language: config['language'] as string || 'en',
+      maxLength: config.maxCommitLength,
+      strict: config.conventionalCommitsOnly ?? true,
+    });
+    
+    if (!result.isValid) {
+      console.error('\n❌ Commit message validation failed:');
+      result.errors.forEach(error => console.error(`  - ${error}`));
+      console.error('\n💡 Tip: Use "smart-commit" to generate a proper commit message');
+      process.exit(1);
+    }
+    
+    if (result.improvedMessage && result.improvedMessage !== commitMessage.trim()) {
+      console.log('\n✨ Improved commit message:');
+      console.log(`  ${result.improvedMessage}`);
+      await fs.writeFile(commitMsgFile, result.improvedMessage);
+    }
+  }
+
+  /**
    * Ask user for confirmation
    */
   private async askForConfirmation(): Promise<boolean> {

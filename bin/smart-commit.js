@@ -169,4 +169,53 @@ program
     }
   });
 
+// Install hooks command
+program
+  .command('install-hooks')
+  .description('Install Git hooks for automatic commit message validation and improvement')
+  .action(async () => {
+    try {
+      const cli = new SmartCommitCli();
+      await cli.installHooks();
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
+// Uninstall hooks command
+program
+  .command('uninstall-hooks')
+  .description('Uninstall Git hooks')
+  .action(async () => {
+    try {
+      const cli = new SmartCommitCli();
+      await cli.uninstallHooks();
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
+// Hook command (internal, called by git hooks)
+program
+  .command('hook')
+  .description('Internal command for Git hooks')
+  .argument('<hook-type>', 'Hook type (commit-msg)')
+  .argument('<file>', 'Hook file path')
+  .action(async (hookType, file) => {
+    try {
+      const cli = new SmartCommitCli();
+      if (hookType === 'commit-msg') {
+        await cli.handleCommitMsgHook(file);
+      } else {
+        console.error(`Unknown hook type: ${hookType}`);
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error('Error:', error.message);
+      process.exit(1);
+    }
+  });
+
 program.parse();

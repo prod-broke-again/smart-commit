@@ -1,6 +1,6 @@
 {
   "name": "smart-commit-ai",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Smart Commit Tool - глобальный инструмент для генерации осмысленных сообщений коммитов с использованием ИИ",
   "main": "lib/index.js",
   "bin": {
