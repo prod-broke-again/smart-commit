@@ -50,19 +50,32 @@ smart-commit config --get language
 # Установить значение
 smart-commit config --set language=ru
 
-# Установить глобально
+# Установить ключи для разных провайдеров (новый способ - рекомендуется)
+smart-commit config --global --set apiKeys.openai=sk-...
+smart-commit config --global --set apiKeys.timeweb=tw-...
+smart-commit config --global --set apiKeys.anthropic=sk-ant-...
+
+# Установить глобально (старый способ - устарел)
 smart-commit config --global --set apiKey=ваш_ключ
+
+# Установить проект-специфичные настройки
+smart-commit config --set apiKey=project-key
+smart-commit config --set defaultProvider=timeweb
+smart-commit config --set defaultModel=gpt-4o-mini
 ```
 
 ### Доступные настройки
 
 | Параметр | Описание | Возможные значения |
 |----------|----------|-------------------|
+| `apiKey` | ⚠️ Устарел - API ключ (для обратной совместимости) | Строка |
+| `apiKeys` | ✅ Рекомендуется - API ключи для провайдеров | Объект `{ "provider": "key" }` |
+| `defaultProvider` | Провайдер ИИ | `gptunnel`, `openai`, `anthropic`, `claude`, `gemini`, `google`, `timeweb` |
+| `defaultModel` | Модель ИИ | Зависит от провайдера |
 | `language` | Язык коммитов | `ru`, `en` |
-| `aiModel` | Модель ИИ | `gpt-4`, `gpt-3.5-turbo` |
 | `maxCommitLength` | Максимальная длина коммита | `50-100` |
 | `includeScope` | Включать scope | `true`, `false` |
-| `analysisMode` | Режим анализа | `basic`, `full` |
+| `analysisMode` | Режим анализа | `lite`, `full` |
 | `customInstructions` | Кастомные инструкции | Любой текст |
 
 ## 🤖 Управление моделями ИИ

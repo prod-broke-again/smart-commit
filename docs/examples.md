@@ -11,6 +11,11 @@ npm install -g smart-commit-ai
 # Настройка
 smart-commit setup
 
+# Установка API ключей для разных провайдеров (рекомендуется)
+smart-commit config --global --set apiKeys.openai=sk-...
+smart-commit config --global --set apiKeys.timeweb=tw-...
+smart-commit config --global --set defaultProvider=timeweb
+
 # Генерация конфигурации проекта
 smart-commit generate-config
 ```
@@ -251,14 +256,45 @@ smart-commit config --set language=ru
 smart-commit config --set language=en
 ```
 
+### Настройка API ключей для разных провайдеров
+
+```bash
+# Установить ключи для всех провайдеров
+smart-commit config --global --set apiKeys.openai=sk-...
+smart-commit config --global --set apiKeys.timeweb=tw-...
+smart-commit config --global --set apiKeys.anthropic=sk-ant-...
+smart-commit config --global --set apiKeys.gemini=...
+
+# Переключиться на другой провайдер
+smart-commit config --global --set defaultProvider=timeweb
+```
+
 ### Изменение модели ИИ
 
 ```bash
-# GPT-4 (лучше, но дороже)
-smart-commit config --set aiModel=gpt-4
+# GPT-4o-mini (рекомендуется)
+smart-commit config --set defaultModel=gpt-4o-mini
 
-# GPT-3.5 Turbo (быстрее, дешевле)
-smart-commit config --set aiModel=gpt-3.5-turbo
+# GPT-4 (лучше, но дороже)
+smart-commit config --set defaultModel=gpt-4
+
+# Claude 3.5 Sonnet
+smart-commit config --set defaultModel=claude-3-5-sonnet-20241022
+```
+
+### Проектные настройки
+
+```bash
+# Для простого проекта - легкая модель
+smart-commit config --set defaultModel=gpt-3.5-turbo
+smart-commit config --set defaultProvider=openai
+
+# Для крупного проекта - модель с большим контекстом
+smart-commit config --set defaultModel=gpt-4o
+smart-commit config --set defaultProvider=timeweb
+
+# Проект-специфичный API ключ
+smart-commit config --set apiKey=project-specific-key
 ```
 
 ### Изменение длины коммита
@@ -307,7 +343,8 @@ jobs:
         with:
           node-version: '18'
       - run: npm install -g smart-commit-ai
-      - run: smart-commit config --set apiKey=${{ secrets.API_KEY }}
+      - run: smart-commit config --global --set apiKeys.openai=${{ secrets.OPENAI_API_KEY }}
+      - run: smart-commit config --global --set defaultProvider=openai
       - run: smart-commit deploy-smart
 ```
 
@@ -318,7 +355,8 @@ deploy:
   stage: deploy
   script:
     - npm install -g smart-commit-ai
-    - smart-commit config --set apiKey=$API_KEY
+    - smart-commit config --global --set apiKeys.openai=$OPENAI_API_KEY
+    - smart-commit config --global --set defaultProvider=openai
     - smart-commit deploy-smart
   only:
     - main
@@ -350,6 +388,10 @@ smart-commit generate-config
 
 ```bash
 # Установить API ключ
+# Новый способ (рекомендуется)
+smart-commit config --global --set apiKeys.provider=your-key
+
+# Старый способ (для обратной совместимости)
 smart-commit config --set apiKey=your-key
 ```
 
