@@ -23,7 +23,14 @@ export class TimewebApiClient implements IAiAssistant {
     // Базовый URL можно настроить через конфигурацию или использовать дефолтный
     // По документации, базовый URL находится в дашборде агента
     // Формат: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{access_id}/v1
+    // Этот URL уже является полным baseURL для агента, к нему просто добавляется /chat/completions
     this.baseURL = baseURL ?? 'https://agent.timeweb.cloud';
+    
+    // Убедимся, что baseURL не заканчивается на /
+    if (this.baseURL.endsWith('/')) {
+      this.baseURL = this.baseURL.slice(0, -1);
+    }
+    
     this.httpClient = axios.create({
       baseURL: this.baseURL,
       timeout: 30000,
@@ -86,18 +93,20 @@ export class TimewebApiClient implements IAiAssistant {
     };
 
     try {
-      // Timeweb agent endpoint structure:
-      // baseURL format: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{agent_id}/v1
-      // endpoint should be: /chat/completions (relative to baseURL)
-      // Full URL will be: baseURL + /chat/completions
+      // Timeweb agent endpoint structure (based on PHP implementation):
+      // baseURL: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{agent_id}/v1
+      // endpoint: /chat/completions
+      // Full URL: baseURL + /chat/completions
+      // Example: https://agent.timeweb.cloud/api/v1/cloud-ai/agents/{agent_id}/v1/chat/completions
       const endpoint = '/chat/completions';
       
-      // Log for debugging (can be removed later)
+      // Log for debugging
       if (process.env['DEBUG']) {
         console.log('Timeweb API Request:', {
           baseURL: this.baseURL,
           endpoint,
           fullURL: `${this.baseURL}${endpoint}`,
+          hasApiKey: !!this.apiKey,
         });
       }
       
