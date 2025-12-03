@@ -102,62 +102,97 @@ export class TimewebApiClient implements IAiAssistant {
     const endpoint = '/chat/completions';
     
     try {
-      // Log for debugging
-      if (process.env['DEBUG']) {
-        console.log('Timeweb API Request:', {
-          baseURL: this.baseURL,
-          endpoint,
-          fullURL: `${this.baseURL}${endpoint}`,
-          hasApiKey: !!this.apiKey,
-        });
-      }
+      // Log request details for debugging
+      const promptLength = prompt.length;
+      const estimatedTokens = this.estimateTokens(prompt);
+      console.log('Timeweb API Request:', {
+        baseURL: this.baseURL,
+        endpoint,
+        fullURL: `${this.baseURL}${endpoint}`,
+        promptLength,
+        estimatedTokens,
+        maxTokens,
+        temperature,
+        messagesCount: messages.length,
+      });
       
       const response = await this.httpClient.post(endpoint, requestBody);
       
-      // Log for debugging (only in DEBUG mode)
-      if (process.env['DEBUG']) {
-        console.log('Timeweb API Response:', {
-          status: response.status,
-          hasData: !!response.data,
-          hasChoices: !!response.data?.choices,
-        });
+      // Log response details
+      console.log('Timeweb API Response:', {
+        status: response.status,
+        hasData: !!response.data,
+        hasChoices: !!response.data?.choices,
+        choicesCount: response.data?.choices?.length ?? 0,
+      });
+      
+      // Validate response structure
+      if (!response.data) {
+        throw new Error('Timeweb API вернул пустой ответ (нет поля data)');
       }
       
-      const choice = response.data?.choices?.[0];
+      if (!response.data.choices || !Array.isArray(response.data.choices)) {
+        throw new Error(`Некорректная структура ответа Timeweb: отсутствует массив choices. Ответ: ${JSON.stringify(response.data).substring(0, 500)}`);
+      }
+      
+      if (response.data.choices.length === 0) {
+        throw new Error(`Timeweb API вернул пустой массив choices. Ответ: ${JSON.stringify(response.data).substring(0, 500)}`);
+      }
+      
+      const choice = response.data.choices[0];
+      
+      if (!choice) {
+        throw new Error('Timeweb API вернул undefined в качестве первого choice');
+      }
+      
       const content = choice?.message?.content;
 
       // Validate response
-      if (!content) {
+      if (!content || (typeof content === 'string' && content.trim().length === 0)) {
         const finishReason = choice?.finish_reason;
         const usage = response.data?.usage;
+        const responseDataStr = JSON.stringify(response.data, null, 2);
         
-        // Log detailed error info for debugging
-        if (process.env['DEBUG']) {
-          console.error('Timeweb API Error Details:', {
-            finishReason,
-            usage,
-            responseData: response.data,
-          });
-        }
+        // Always log detailed error info when there's an issue
+        console.error('Timeweb API Error Details:');
+        console.error('  - finish_reason:', finishReason || 'не указан');
+        console.error('  - usage:', usage || 'не указан');
+        console.error('  - maxTokens в запросе:', maxTokens);
+        console.error('  - Полный ответ API:', responseDataStr);
+        console.error('  - choice объект:', JSON.stringify(choice, null, 2));
         
         // Provide more specific error message
         if (finishReason === 'length') {
           throw new Error(`Ответ от Timeweb был обрезан из-за лимита токенов. Увеличьте maxTokens (текущий: ${maxTokens}, использовано: ${usage?.completion_tokens ?? 0}, лимит: 8190)`);
         } else if (finishReason) {
-          throw new Error(`Некорректный ответ от Timeweb: пустое сообщение (finish_reason: ${finishReason})`);
+          throw new Error(`Некорректный ответ от Timeweb: пустое сообщение (finish_reason: ${finishReason}). Полный ответ: ${responseDataStr.substring(0, 500)}`);
         } else {
-          throw new Error('Некорректный ответ от Timeweb: пустое сообщение');
+          throw new Error(`Некорректный ответ от Timeweb: пустое сообщение. Полный ответ: ${responseDataStr.substring(0, 500)}`);
         }
       }
 
       return content.trim();
     } catch (error) {
+      // Log all errors with full details
+      console.error('Timeweb API Exception:', error);
+      
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         const statusText = error.response?.statusText;
         const responseData = error.response?.data;
         const requestUrl = error.config?.url;
         const baseURL = error.config?.baseURL;
+        
+        // Log detailed error info
+        console.error('Timeweb API Axios Error Details:');
+        console.error('  - Status:', status || 'нет статуса');
+        console.error('  - Status Text:', statusText || 'нет');
+        console.error('  - Request URL:', requestUrl || 'неизвестно');
+        console.error('  - Base URL:', baseURL || this.baseURL || 'неизвестно');
+        console.error('  - Endpoint:', endpoint);
+        console.error('  - Full URL:', baseURL && requestUrl ? `${baseURL}${requestUrl}` : `${this.baseURL}${endpoint}`);
+        console.error('  - Response Data:', responseData ? JSON.stringify(responseData, null, 2) : 'нет данных');
+        console.error('  - Request Body:', JSON.stringify(requestBody, null, 2).substring(0, 1000));
         
         // Enhanced error message with debugging info
         let errorMessage = `Ошибка Timeweb API`;
@@ -166,21 +201,23 @@ export class TimewebApiClient implements IAiAssistant {
         }
         if (responseData?.error?.message) {
           errorMessage += `: ${responseData.error.message}`;
+        } else if (responseData?.message) {
+          errorMessage += `: ${responseData.message}`;
         } else if (error.message) {
           errorMessage += `: ${error.message}`;
         }
         
         // Add detailed debugging info
-        const fullUrl = baseURL && requestUrl ? `${baseURL}${requestUrl}` : 'unknown';
+        const fullUrl = baseURL && requestUrl ? `${baseURL}${requestUrl}` : `${this.baseURL}${endpoint}`;
         errorMessage += `\nURL: ${fullUrl}`;
         errorMessage += `\nBaseURL: ${this.baseURL}`;
         errorMessage += `\nEndpoint: ${endpoint}`;
         if (responseData) {
-          errorMessage += `\nResponse: ${JSON.stringify(responseData).substring(0, 200)}`;
+          errorMessage += `\nResponse: ${JSON.stringify(responseData).substring(0, 500)}`;
         }
         
         // Log to console for debugging
-        console.error('Timeweb API Error Details:', {
+        console.error('Timeweb API Error Summary:', {
           status,
           statusText,
           baseURL: this.baseURL,
