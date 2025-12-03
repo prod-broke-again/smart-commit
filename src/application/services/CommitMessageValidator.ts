@@ -56,7 +56,6 @@ export class CommitMessageValidator {
     try {
       const improved = await this.aiAssistant.generateText(prompt, {
         model: AiModel.GPT_3_5_TURBO,
-        maxTokens: 200,
         temperature: 0.7,
       });
 
