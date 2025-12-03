@@ -59,10 +59,13 @@ export class TimewebApiClient implements IAiAssistant {
     const model = options.model || AiModel.OPENAI_GPT_4O_MINI;
     // Calculate token limits and temperature
     const estimatedPromptTokens = this.estimateTokens(prompt);
-    // Ensure we have enough tokens for response
     // Timeweb has a limit of 8190 tokens for response generation
-    const remainingTokens = Math.max(model.maxTokens - estimatedPromptTokens, 500);
-    const maxTokens = options.maxTokens ?? Math.min(remainingTokens, 8190); // Timeweb limit: 8190 tokens
+    // Use Timeweb's limit instead of model's limit since Timeweb allows much higher limits
+    const timewebMaxTokens = 8190;
+    // Reserve some tokens for prompt, ensure minimum response space
+    const availableForResponse = Math.max(timewebMaxTokens - estimatedPromptTokens, 1000);
+    // Use provided maxTokens if specified, otherwise use available space (capped at Timeweb limit)
+    const maxTokens = options.maxTokens ?? Math.min(availableForResponse, timewebMaxTokens);
     const temperature = options.temperature ?? model.temperature;
 
     // Build messages array for OpenAI-compatible format
