@@ -80,7 +80,7 @@ export class GitOperations implements IGitAnalyzer {
     const { spawn } = require('child_process');
 
     await new Promise<void>((resolve, reject) => {
-      const git = spawn('git', ['commit', '-F', '-'], { cwd: process.cwd() });
+      const git = spawn('git', ['commit', '--no-verify', '-F', '-'], { cwd: process.cwd() });
 
       git.stdin.write(message);
       git.stdin.end();
