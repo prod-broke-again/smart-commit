@@ -16,6 +16,7 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
   ) {}
 
   public async runStandardWorkflow(options: WorkflowOptions = {}): Promise<void> {
+    const verbose = options.verbose || process.env['SMART_COMMIT_VERBOSE'] === 'true';
     const spinner = ora('Analyzing repository...').start();
 
     try {
@@ -74,7 +75,7 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
 
       spinner.succeed('Commit created and pushed successfully!');
 
-      if (options.verbose) {
+      if (verbose) {
         console.log(chalk.green('\nCommit details:'));
         console.log(chalk.cyan(`Message: ${commitMessage.toString()}`));
         console.log(chalk.cyan(`Files changed: ${stagedChanges.length}`));

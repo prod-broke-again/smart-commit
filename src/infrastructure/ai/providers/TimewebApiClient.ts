@@ -106,7 +106,7 @@ export class TimewebApiClient implements IAiAssistant {
     
     try {
       // Log request details for debugging (only in verbose mode)
-      if (process.env.SMART_COMMIT_VERBOSE === 'true') {
+      if (process.env['SMART_COMMIT_VERBOSE'] === 'true') {
         const promptLength = prompt.length;
         const estimatedTokens = this.estimateTokens(prompt);
         console.log('Timeweb API Request:', {
