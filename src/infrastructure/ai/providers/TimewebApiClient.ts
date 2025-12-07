@@ -105,19 +105,21 @@ export class TimewebApiClient implements IAiAssistant {
     const endpoint = '/chat/completions';
     
     try {
-      // Log request details for debugging
-      const promptLength = prompt.length;
-      const estimatedTokens = this.estimateTokens(prompt);
-      console.log('Timeweb API Request:', {
-        baseURL: this.baseURL,
-        endpoint,
-        fullURL: `${this.baseURL}${endpoint}`,
-        promptLength,
-        estimatedTokens,
-        maxTokens,
-        temperature,
-        messagesCount: messages.length,
-      });
+      // Log request details for debugging (only in verbose mode)
+      if (process.env.SMART_COMMIT_VERBOSE === 'true') {
+        const promptLength = prompt.length;
+        const estimatedTokens = this.estimateTokens(prompt);
+        console.log('Timeweb API Request:', {
+          baseURL: this.baseURL,
+          endpoint,
+          fullURL: `${this.baseURL}${endpoint}`,
+          promptLength,
+          estimatedTokens,
+          maxTokens,
+          temperature,
+          messagesCount: messages.length,
+        });
+      }
       
       const response = await this.httpClient.post(endpoint, requestBody);
       
