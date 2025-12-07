@@ -46,6 +46,9 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
       // Get merged configuration
       const config = await this.configManager.getMergedConfig();
 
+      // Get repository info for verbose mode
+      const remoteUrl = await this.gitAnalyzer.getRemoteUrl();
+
       // Get staged changes
       const stagedChanges = await this.gitAnalyzer.getStagedChanges();
 
@@ -76,9 +79,20 @@ export class WorkflowOrchestrator implements IWorkflowOrchestrator {
       spinner.succeed('Commit created and pushed successfully!');
 
       if (verbose) {
-        console.log(chalk.green('\nCommit details:'));
-        console.log(chalk.cyan(`Message: ${commitMessage.toString()}`));
-        console.log(chalk.cyan(`Files changed: ${stagedChanges.length}`));
+        // Get information about the new commit
+        const lastCommit = await this.gitAnalyzer.getLastCommit();
+
+        console.log(chalk.green('\n📝 Commit Details:'));
+        console.log(chalk.cyan(`   Message: ${commitMessage.toString()}`));
+        console.log(chalk.cyan(`   Files changed: ${stagedChanges.length}`));
+        if (lastCommit) {
+          console.log(chalk.cyan(`   Hash: ${lastCommit.hash.substring(0, 8)}`));
+          console.log(chalk.cyan(`   Author: ${lastCommit.author}`));
+          console.log(chalk.cyan(`   Date: ${lastCommit.date}`));
+        }
+        if (remoteUrl) {
+          console.log(chalk.cyan(`   Pushed to: ${remoteUrl}`));
+        }
       }
 
     } catch (error) {

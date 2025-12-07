@@ -123,14 +123,6 @@ export class TimewebApiClient implements IAiAssistant {
       
       const response = await this.httpClient.post(endpoint, requestBody);
       
-      // Log response details
-      console.log('Timeweb API Response:', {
-        status: response.status,
-        hasData: !!response.data,
-        hasChoices: !!response.data?.choices,
-        choicesCount: response.data?.choices?.length ?? 0,
-      });
-      
       // Validate response structure
       if (!response.data) {
         throw new Error('Timeweb API вернул пустой ответ (нет поля data)');

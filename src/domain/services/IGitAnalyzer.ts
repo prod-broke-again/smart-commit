@@ -48,6 +48,16 @@ export interface IGitAnalyzer {
    * Checks if remote exists and is accessible
    */
   hasRemote(): Promise<boolean>;
+
+  /**
+   * Gets remote repository URL
+   */
+  getRemoteUrl(): Promise<string>;
+
+  /**
+   * Gets information about the last commit
+   */
+  getLastCommit(): Promise<{ hash: string; author: string; date: string; message: string } | null>;
 }
 
 /**

@@ -120,6 +120,33 @@ export class GitOperations implements IGitAnalyzer {
     }
   }
 
+  public async getRemoteUrl(): Promise<string> {
+    try {
+      const { stdout } = await execAsync('git remote get-url origin', { cwd: process.cwd() });
+      return stdout?.trim() || '';
+    } catch {
+      return '';
+    }
+  }
+
+  public async getLastCommit(): Promise<{ hash: string; author: string; date: string; message: string } | null> {
+    try {
+      const { stdout } = await execAsync('git log -1 --format="%H|%an|%ad|%s" --date=short', { cwd: process.cwd() });
+      const parts = stdout.trim().split('|');
+      if (parts.length >= 4) {
+        return {
+          hash: parts[0],
+          author: parts[1],
+          date: parts[2],
+          message: parts[3]
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   private parseGitStatusOutput(output: string): GitChange[] {
     const lines = output.split('\n').filter(line => line.trim());
     const changes: GitChange[] = [];
