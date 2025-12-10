@@ -321,9 +321,18 @@ export class SmartCommitCli {
 
       console.log(chalk.blue('🔍 Analyzing changes for smart deployment...'));
 
-      // Analyze changes
+      // Analyze changes - use project type from config if available
       const projectAnalyzer = this.container.get<ProjectAnalyzer>('ProjectAnalyzer');
-      const analysis = await projectAnalyzer.analyzeChangesForSmartDeploy(projectPath);
+      let projectType = 'unknown';
+      if (configData.projectInfo?.type) {
+        projectType = configData.projectInfo.type;
+      } else {
+        // Fallback: analyze project to determine type
+        const projectInfo = await projectAnalyzer.analyzeProject(projectPath);
+        projectType = projectInfo.type;
+      }
+
+      const analysis = await projectAnalyzer.analyzeChangesForSmartDeploy(projectPath, projectType);
 
       // Show analysis results
       console.log(chalk.green('\n📊 Analysis Results:'));
@@ -332,7 +341,7 @@ export class SmartCommitCli {
       });
 
       // Generate smart commands
-      const smartCommands = projectAnalyzer.generateSmartDeployCommands(analysis, serverConfig);
+      const smartCommands = projectAnalyzer.generateSmartDeployCommands(analysis);
 
       if (smartCommands.length === 0) {
         console.log(chalk.yellow('✅ No deployment needed - no changes detected!'));

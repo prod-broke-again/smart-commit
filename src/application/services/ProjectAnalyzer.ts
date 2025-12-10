@@ -120,7 +120,7 @@ export class ProjectAnalyzer {
   /**
    * Analyze changes and determine what commands are needed
    */
-  public async analyzeChangesForSmartDeploy(projectPath: string): Promise<SmartDeployAnalysis> {
+  public async analyzeChangesForSmartDeploy(projectPath: string, projectType?: string): Promise<SmartDeployAnalysis> {
     const analysis: SmartDeployAnalysis = {
       needsGitPull: true, // Always pull latest changes
       needsComposerInstall: false,
@@ -134,11 +134,25 @@ export class ProjectAnalyzer {
     };
 
     try {
+      // Determine project type - use provided type or analyze project
+      let actualProjectType: string;
+      let projectFramework: string | undefined;
+
+      if (projectType && projectType !== 'unknown') {
+        actualProjectType = projectType;
+        // For known types, we might not need framework info, but let's keep it simple
+      } else {
+        // Fallback: analyze project to determine type
+        const projectInfo = await this.analyzeProject(projectPath);
+        actualProjectType = projectInfo.type;
+        projectFramework = projectInfo.framework;
+      }
+
       // Get git diff to see what changed
       const { execSync } = require('child_process');
-      const gitDiff = execSync('git diff --name-only HEAD~1 HEAD', { 
-        cwd: projectPath, 
-        encoding: 'utf8' 
+      const gitDiff = execSync('git diff --name-only HEAD~1 HEAD', {
+        cwd: projectPath,
+        encoding: 'utf8'
       }).trim();
 
       if (!gitDiff) {
@@ -149,10 +163,11 @@ export class ProjectAnalyzer {
       const changedFiles = gitDiff.split('\n').filter((file: string) => file.trim());
       analysis.reasons.push(`Detected changes in ${changedFiles.length} files`);
 
-      // Analyze file types and determine needed actions
+      // Analyze file types and determine needed actions based on project type
       for (const file of changedFiles) {
         const filePath = file.toLowerCase();
 
+        // Always check for composer/npm dependencies regardless of project type
         // Composer dependencies
         if (filePath === 'composer.json' || filePath === 'composer.lock') {
           analysis.needsComposerInstall = true;
@@ -165,33 +180,48 @@ export class ProjectAnalyzer {
           analysis.reasons.push(`NPM dependencies changed (${file})`);
         }
 
-        // Frontend files - need build
-        if (filePath.includes('resources/js/') || 
-            filePath.includes('resources/css/') || 
-            filePath.includes('resources/views/') ||
-            filePath.includes('webpack.mix.js') ||
-            filePath.includes('vite.config.js')) {
-          analysis.needsNpmBuild = true;
-          analysis.reasons.push(`Frontend files changed (${file})`);
+        // Project-specific analysis
+        if (actualProjectType === 'php' && projectFramework === 'laravel') {
+          // Laravel-specific files
+          if (filePath.includes('config/') ||
+              filePath.includes('.env') ||
+              filePath.includes('routes/') ||
+              filePath.includes('app/Providers/')) {
+            analysis.needsLaravelOptimize = true;
+            analysis.reasons.push(`Laravel configuration changed (${file})`);
+          }
+
+          // Database migrations
+          if (filePath.includes('database/migrations/')) {
+            analysis.needsLaravelMigrate = true;
+            analysis.reasons.push(`Database migration detected (${file})`);
+          }
+
+          // Laravel frontend files - need build
+          if (filePath.includes('resources/js/') ||
+              filePath.includes('resources/css/') ||
+              filePath.includes('resources/views/') ||
+              filePath.includes('webpack.mix.js') ||
+              filePath.includes('vite.config.js')) {
+            analysis.needsNpmBuild = true;
+            analysis.reasons.push(`Frontend files changed (${file})`);
+          }
+        } else if (actualProjectType === 'nodejs') {
+          // Node.js specific files that need build
+          if (filePath.includes('src/') ||
+              filePath.includes('public/') ||
+              filePath.includes('assets/') ||
+              filePath.includes('webpack.config.js') ||
+              filePath.includes('vite.config.js') ||
+              filePath.includes('tsconfig.json') ||
+              filePath.includes('babel.config.js')) {
+            analysis.needsNpmBuild = true;
+            analysis.reasons.push(`Source files changed (${file})`);
+          }
         }
 
-        // Laravel config files - need optimize
-        if (filePath.includes('config/') || 
-            filePath.includes('.env') ||
-            filePath.includes('routes/') ||
-            filePath.includes('app/Providers/')) {
-          analysis.needsLaravelOptimize = true;
-          analysis.reasons.push(`Laravel configuration changed (${file})`);
-        }
-
-        // Database migrations
-        if (filePath.includes('database/migrations/')) {
-          analysis.needsLaravelMigrate = true;
-          analysis.reasons.push(`Database migration detected (${file})`);
-        }
-
-        // System files - might need restart
-        if (filePath.includes('nginx.conf') || 
+        // System files - might need restart (applies to all project types)
+        if (filePath.includes('nginx.conf') ||
             filePath.includes('php.ini') ||
             filePath.includes('supervisor/')) {
           analysis.needsSystemRestart = true;
@@ -214,7 +244,7 @@ export class ProjectAnalyzer {
   /**
    * Generate smart deployment commands based on analysis
    */
-  public generateSmartDeployCommands(analysis: SmartDeployAnalysis, _config: ServerCommandsConfig): string[] {
+  public generateSmartDeployCommands(analysis: SmartDeployAnalysis): string[] {
     const commands: string[] = [];
 
     // Always pull latest changes
@@ -229,18 +259,23 @@ export class ProjectAnalyzer {
 
     // NPM commands
     if (analysis.needsNpmInstall) {
-      commands.push('npm install');
+      commands.push('npm install --production');
     }
     if (analysis.needsNpmBuild) {
       commands.push('npm run build');
     }
 
-    // Laravel commands
+    // Laravel-specific commands - only if Laravel commands are actually needed
     if (analysis.needsLaravelOptimize) {
       commands.push('php artisan optimize:clear');
     }
     if (analysis.needsLaravelMigrate) {
       commands.push('php artisan migrate --force');
+    }
+
+    // PM2 restart for Node.js projects
+    if (analysis.needsNpmBuild || analysis.needsNpmInstall) {
+      commands.push('pm2 restart 0');
     }
 
     // System commands (only if needed)
