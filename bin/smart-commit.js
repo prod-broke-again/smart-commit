@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const { Command, Help } = require('commander');
-const chalk = require('chalk');
 const { SmartCommitCli } = require('../lib/cli/SmartCommitCli');
 const packageJson = require('../package.json');
 
@@ -17,7 +16,7 @@ program
     showGlobalOptions: true
   })
   .configureOutput({
-    outputError: (str, write) => write(chalk.red(`✗ Error: ${str}`))
+    outputError: (str, write) => write(`✗ Error: ${str}`)
   })
   .addHelpText('beforeAll', `
 ╔══════════════════════════════════════════════════════════════╗
@@ -87,7 +86,7 @@ const configCommand = program
       } else if (options.list) {
         await cli.listConfig(options.global);
       } else {
-        console.log(chalk.yellow('💡 Use --set, --get, or --list options'));
+        console.log('💡 Use --set, --get, or --list options');
       }
     } catch (error) {
       program.error(error.message);
