@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const { Command } = require('commander');
+const { Command, Help } = require('commander');
+const chalk = require('chalk');
 const { SmartCommitCli } = require('../lib/cli/SmartCommitCli');
 const packageJson = require('../package.json');
 
@@ -9,7 +10,33 @@ const program = new Command();
 program
   .name('smart-commit')
   .description('Smart Commit Tool - AI-powered conventional commit messages')
-  .version(packageJson.version);
+  .version(packageJson.version)
+  .configureHelp({
+    sortSubcommands: true,
+    sortOptions: true,
+    showGlobalOptions: true
+  })
+  .configureOutput({
+    outputError: (str, write) => write(chalk.red(`✗ Error: ${str}`))
+  })
+  .addHelpText('beforeAll', `
+╔══════════════════════════════════════════════════════════════╗
+║                    🤖 Smart Commit Tool                     ║
+║              AI-powered conventional commits               ║
+╚══════════════════════════════════════════════════════════════╝
+`)
+  .addHelpText('after', `
+
+Examples:
+  $ smart-commit                    # Generate commit message
+  $ smart-commit --dry-run         # Preview changes
+  $ smart-commit -m "feat: add auth" # Custom message
+  $ smart-commit config --list     # Show configuration
+  $ smart-commit generate-config   # Setup deployment
+  $ smart-commit deploy-smart      # Smart deployment
+
+For more info: https://github.com/prod-broke-again/smart-commit
+`);
 
 program
   .option('--dry-run', 'Show what would be committed without making changes')
@@ -34,15 +61,15 @@ program
         await cli.runStandard({ verbose: options.verbose });
       }
     } catch (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+      program.error(error.message);
     }
   });
 
 // Configuration commands
-program
+const configCommand = program
   .command('config')
-  .description('Manage configuration')
+  .description('⚙️ Manage configuration')
+  .summary('Configure global and project settings')
   .option('--global', 'Configure globally')
   .option('--set <key=value>', 'Set configuration value')
   .option('--get <key>', 'Get configuration value')
@@ -60,55 +87,52 @@ program
       } else if (options.list) {
         await cli.listConfig(options.global);
       } else {
-        console.log('Use --set, --get, or --list options');
+        console.log(chalk.yellow('💡 Use --set, --get, or --list options'));
       }
     } catch (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+      program.error(error.message);
     }
   });
 
-// Models commands
-program
+// AI Models commands
+const modelsCommand = program
   .command('models')
-  .description('Manage AI models')
+  .description('🤖 Manage AI models')
+  .summary('Manage AI models and cache')
   .addCommand(
-    new (require('commander').Command)('list')
-      .description('List available models')
+    new Command('list')
+      .description('📋 List available models')
       .option('--all', 'Show all models (default: first 15)')
       .action(async (options) => {
         try {
           const cli = new SmartCommitCli();
           await cli.listModels(options.all);
         } catch (error) {
-          console.error('Error:', error.message);
-          process.exit(1);
+          program.error(error.message);
         }
       })
   )
   .addCommand(
-    new (require('commander').Command)('refresh')
-      .description('Refresh models from API')
+    new Command('refresh')
+      .description('🔄 Refresh models from API')
       .action(async () => {
         try {
           const cli = new SmartCommitCli();
           await cli.refreshModels();
         } catch (error) {
-          console.error('Error:', error.message);
-          process.exit(1);
+          program.error(error.message);
         }
       })
   )
   .addCommand(
-    new (require('commander').Command)('clear-cache')
-      .description('Clear models cache')
+    new Command('clear-cache')
+      .description('🧹 Clear models cache')
       .action(async () => {
         try {
           const cli = new SmartCommitCli();
           await cli.clearModelsCache();
         } catch (error) {
-          console.error('Error:', error.message);
-          process.exit(1);
+          program.error(error.message);
         }
       })
   );
@@ -116,91 +140,91 @@ program
 // Setup command
 program
   .command('setup')
-  .description('Initial setup and configuration')
+  .description('🚀 Initial setup and configuration')
+  .summary('Run initial setup wizard')
   .action(async () => {
     try {
       const cli = new SmartCommitCli();
       await cli.runSetup();
     } catch (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+      program.error(error.message);
     }
   });
 
 // Generate config command
 program
   .command('generate-config')
-  .description('Generate project-specific configuration')
+  .description('⚙️ Generate project-specific configuration')
+  .summary('Auto-generate deployment config')
   .action(async () => {
     try {
       const cli = new SmartCommitCli();
       await cli.generateConfig();
     } catch (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+      program.error(error.message);
     }
   });
 
 // Deploy command
 program
   .command('deploy')
-  .description('Execute server commands via SSH')
+  .description('🚀 Execute server commands via SSH')
+  .summary('Deploy with full command set')
   .action(async () => {
     try {
       const cli = new SmartCommitCli();
       await cli.deployServer();
     } catch (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+      program.error(error.message);
     }
   });
 
 // Smart deploy command
 program
   .command('deploy-smart')
-  .description('Execute only necessary server commands based on changes')
+  .description('🧠 Execute only necessary server commands based on changes')
+  .summary('Smart deploy based on git diff')
   .action(async () => {
     try {
       const cli = new SmartCommitCli();
       await cli.deploySmart();
     } catch (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+      program.error(error.message);
     }
   });
 
-// Install hooks command
+// Git hooks commands
 program
   .command('install-hooks')
-  .description('Install Git hooks for automatic commit message validation and improvement')
+  .description('🔗 Install Git hooks for automatic commit message validation and improvement')
+  .summary('Install Git hooks')
   .action(async () => {
     try {
       const cli = new SmartCommitCli();
       await cli.installHooks();
     } catch (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+      program.error(error.message);
     }
   });
 
-// Uninstall hooks command
 program
   .command('uninstall-hooks')
-  .description('Uninstall Git hooks')
+  .description('🔌 Uninstall Git hooks')
+  .summary('Remove Git hooks')
   .action(async () => {
     try {
       const cli = new SmartCommitCli();
       await cli.uninstallHooks();
     } catch (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+      program.error(error.message);
     }
   });
 
 // Hook command (internal, called by git hooks)
 program
   .command('hook')
-  .description('Internal command for Git hooks')
+  .description('⚙️ Internal command for Git hooks')
+  .summary('Git hook handler')
   .argument('<hook-type>', 'Hook type (commit-msg)')
   .argument('<file>', 'Hook file path')
   .action(async (hookType, file) => {
@@ -209,12 +233,10 @@ program
       if (hookType === 'commit-msg') {
         await cli.handleCommitMsgHook(file);
       } else {
-        console.error(`Unknown hook type: ${hookType}`);
-        process.exit(1);
+        program.error(`Unknown hook type: ${hookType}`);
       }
     } catch (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+      program.error(error.message);
     }
   });
 
