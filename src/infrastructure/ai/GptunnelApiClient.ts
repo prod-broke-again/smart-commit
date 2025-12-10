@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import chalk from 'chalk';
 import { AiModel, GptunnelModelInfo, AiModelDescriptor } from '../../domain/entities/AiModel';
 import { ApiCredentials } from '../../domain/value-objects/ApiCredentials';
 import { IAiAssistant, AiGenerationOptions, ModelCapabilities } from '../../domain/services/IAiAssistant';
@@ -73,7 +74,7 @@ export class GptunnelApiClient implements IAiAssistant {
     }
 
     try {
-      console.log('Generating commit message with AI...');
+      console.log(chalk.blue('🤖 Generating commit message with AI...'));
 
       const response = await this.httpClient.post('/chat/completions', requestBody);
 
@@ -89,9 +90,9 @@ export class GptunnelApiClient implements IAiAssistant {
       }
 
       // Show AI response after successful generation
-      console.log('\n--- AI Response ---');
-      console.log(content.trim());
-      console.log('--- End ---\n');
+      console.log(chalk.gray('\n--- AI Response ---'));
+      console.log(chalk.cyan(content.trim()));
+      console.log(chalk.gray('--- End ---\n'));
 
       return content.trim();
     } catch (error) {

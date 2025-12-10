@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import chalk from 'chalk';
 import { AiModel, AiModelDescriptor } from '../../../domain/entities/AiModel';
 import { ApiCredentials } from '../../../domain/value-objects/ApiCredentials';
 import { IAiAssistant, AiGenerationOptions, ModelCapabilities } from '../../../domain/services/IAiAssistant';
@@ -109,7 +110,7 @@ export class TimewebApiClient implements IAiAssistant {
       if (process.env['SMART_COMMIT_VERBOSE'] === 'true') {
         const promptLength = prompt.length;
         const estimatedTokens = this.estimateTokens(prompt);
-        console.log('Timeweb API Request:', {
+        console.log(chalk.magenta('🔗 Timeweb API Request:'), {
           baseURL: this.baseURL,
           endpoint,
           fullURL: `${this.baseURL}${endpoint}`,

@@ -2,6 +2,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import chalk from 'chalk';
 
 const execAsync = promisify(exec);
 
@@ -58,8 +59,8 @@ export class GitHooksManager {
     // Write hook file
     await fs.writeFile(this.commitMsgHookPath, hookScript, { mode: 0o755 });
 
-    console.log('✓ Git hook installed successfully!');
-    console.log(`  Hook location: ${this.commitMsgHookPath}`);
+    console.log(chalk.green('✓ Git hook installed successfully!'));
+    console.log(chalk.gray(`  Hook location: ${this.commitMsgHookPath}`));
   }
 
   /**
@@ -68,9 +69,9 @@ export class GitHooksManager {
   public async uninstallCommitMsgHook(): Promise<void> {
     if (await fs.pathExists(this.commitMsgHookPath)) {
       await fs.remove(this.commitMsgHookPath);
-      console.log('✓ Git hook uninstalled successfully!');
+      console.log(chalk.green('✓ Git hook uninstalled successfully!'));
     } else {
-      console.log('ℹ No hook found to uninstall.');
+      console.log(chalk.cyan('ℹ No hook found to uninstall.'));
     }
   }
 
