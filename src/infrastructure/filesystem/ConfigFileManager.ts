@@ -76,17 +76,20 @@ export class ConfigFileManager implements IConfigurationManager {
     // Determine model: project config overrides global
     const model = projectConfig.defaultModel ?? globalConfig.defaultModel;
 
-    // Find API key with priority: project apiKey > global apiKeys[provider] > global apiKey (backward compatibility)
-    let apiKey: string | null = null;
-    
-    if (projectConfig.apiKey) {
-      // Project-specific key takes highest priority
-      apiKey = projectConfig.apiKey;
-    } else if (globalConfig.apiKeys && globalConfig.apiKeys[provider]) {
-      // Use key from apiKeys map for the specific provider
-      apiKey = globalConfig.apiKeys[provider];
-    } else if (globalConfig.apiKey) {
-      // Fallback to old apiKey field for backward compatibility
+    // Merged apiKeys: global + project (project overrides), so keys are never lost when merging configs
+    const projectApiKeys = (projectConfig as unknown as Record<string, unknown>)['apiKeys'];
+    const mergedApiKeys: Record<string, string> = {
+      ...(globalConfig.apiKeys || {}),
+      ...(projectApiKeys && typeof projectApiKeys === 'object' && !Array.isArray(projectApiKeys)
+        ? (projectApiKeys as Record<string, string>)
+        : {}),
+    };
+
+    // Resolve API key: project apiKey > apiKeys[provider] > deprecated global apiKey
+    let apiKey: string | null =
+      projectConfig.apiKey ?? mergedApiKeys[provider] ?? null;
+    if (apiKey === null && globalConfig.apiKey) {
+      // Deprecated: prefer apiKeys.<provider> (e.g. apiKeys.gptunnel)
       apiKey = globalConfig.apiKey;
     }
 
@@ -103,7 +106,7 @@ export class ConfigFileManager implements IConfigurationManager {
       aiModel = AiModel.create(model, provider, 400000, 0.7);
     }
 
-    // Merge configs (project overrides global)
+    // Merge configs (project overrides global); keep merged apiKeys so keys are never lost
     const merged: MergedConfig = {
       ...globalConfig,
       ...projectConfig,
@@ -111,6 +114,7 @@ export class ConfigFileManager implements IConfigurationManager {
       defaultModel: model,
       apiCredentials,
       aiModel,
+      apiKeys: mergedApiKeys,
     };
 
     return merged;

@@ -10,21 +10,21 @@ Global AI-powered tool for generating meaningful commit messages and running sma
 
 ## ⚠️ Important Configuration Update
 
-**Version 1.0.13** introduces support for multiple API keys for different providers and project-specific settings.
+Use **`apiKeys.<provider>`** for API keys. Each provider has its own key; model loading and API calls use the key for the current `defaultProvider`.
 
-- ⚠️ **`apiKey` is deprecated** — use `apiKeys` to store keys for different providers
-- ✅ **New feature**: Store keys for all providers simultaneously (`apiKeys.openai`, `apiKeys.timeweb`, etc.)
-- ✅ **Project settings**: Each project can have its own `apiKey`, `defaultProvider`, and `defaultModel`
-- ✅ **New provider**: Timeweb AI support added
+- ✅ **Recommended**: `apiKeys.gptunnel`, `apiKeys.timeweb`, `apiKeys.openai`, etc.
+- ⚠️ **Legacy**: `apiKey` (gptunnel only) is still supported but deprecated.
+- ✅ **Project settings**: Each project can have its own `apiKey`, `defaultProvider`, and `defaultModel`.
 
 ```bash
-# Old way (still works, but deprecated)
-smart-commit config --global --set apiKey=YOUR_KEY
-
-# New way (recommended)
+# Recommended (per-provider keys)
+smart-commit config --global --set apiKeys.gptunnel=YOUR_GPTUNNEL_KEY
+smart-commit config --global --set apiKeys.timeweb=YOUR_TIMEWEB_KEY
 smart-commit config --global --set apiKeys.openai=sk-...
-smart-commit config --global --set apiKeys.timeweb=tw-...
-smart-commit config --global --set apiKeys.anthropic=sk-ant-...
+
+# Set default provider and model
+smart-commit config --global --set defaultProvider=timeweb
+smart-commit config --global --set defaultModel=gemini-2.0-flash
 ```
 
 ## 🔗 Links
@@ -108,13 +108,19 @@ Continue? [y/N]
 All settings can be stored globally (`~/.smart-commit/config.json`) or per-project (`.smart-commit.json`).
 
 ```bash
-# Set API keys for different providers (recommended)
-smart-commit config --global --set apiKeys.openai=sk-...
+# Set API keys per provider (recommended)
+smart-commit config --global --set apiKeys.gptunnel=shds-...
 smart-commit config --global --set apiKeys.timeweb=tw-...
-smart-commit config --global --set apiKeys.anthropic=sk-ant-...
+smart-commit config --global --set apiKeys.openai=sk-...
 
-# Set project-specific settings (overrides global)
-smart-commit config --set apiKey=project-key
+# Timeweb: also set base URL for your agent (required to avoid 404)
+smart-commit config --global --set baseUrls.timeweb=https://agent.timeweb.cloud/api/v1/cloud-ai/agents/YOUR_AGENT_ID/v1
+
+# Set default provider and model
+smart-commit config --global --set defaultProvider=timeweb
+smart-commit config --global --set defaultModel=gemini-2.0-flash
+
+# Project-specific overrides
 smart-commit config --set defaultProvider=timeweb
 smart-commit config --set defaultModel=gpt-4o-mini
 
@@ -177,5 +183,4 @@ Smart Commit is released under the [MIT License](LICENSE).
 
 ---
 
-Made with ❤️ by [Eugene (prod-broke-again)](https://github.com/prod-broke-again)  
-Version: 1.0.14
+Made with ❤️ by [Eugene (prod-broke-again)](https://github.com/prod-broke-again)

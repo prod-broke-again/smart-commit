@@ -504,11 +504,11 @@ export class SmartCommitCli {
       console.log();
 
       // In a real implementation, you might use readline for interactive input
-      console.log(chalk.cyan('Run the following command to set your API key:'));
-      console.log(chalk.green('smart-commit config --global --set apiKey=YOUR_API_KEY'));
-      console.log(chalk.green('  or for specific provider:'));
-      console.log(chalk.green('smart-commit config --global --set apiKeys.openai=YOUR_OPENAI_KEY'));
+      console.log(chalk.cyan('Run the following command to set your API key (prefer apiKeys.<provider>):'));
+      console.log(chalk.green('smart-commit config --global --set apiKeys.gptunnel=YOUR_GPTUNNEL_KEY'));
       console.log(chalk.green('smart-commit config --global --set apiKeys.timeweb=YOUR_TIMEWEB_KEY'));
+      console.log(chalk.green('smart-commit config --global --set apiKeys.openai=YOUR_OPENAI_KEY'));
+      console.log(chalk.gray('  (legacy: apiKey=... for gptunnel only)'));
       console.log();
     } else {
       console.log(chalk.green('✓ API key is configured'));
