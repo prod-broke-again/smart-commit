@@ -18,6 +18,9 @@ coverage/
 .env.local
 .env.production
 
+# npm auth (may contain access tokens — never commit)
+.npmrc
+
 # IDE
 .vscode/
 .idea/
