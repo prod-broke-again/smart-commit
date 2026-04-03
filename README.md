@@ -72,13 +72,26 @@ smart-commit deploy-smart
   • Frontend files changed (resources/js/components/Button.vue)
   • NPM dependencies changed (package.json)
 
-⚠️  Smart deployment will execute 3 commands:
-  1. git pull origin main
-  2. npm install
-  3. npm run build
+⚠️  Smart deployment will run N step(s) (local first, then remote):
+  Local (this machine):
+    1. npm run build
+  Remote (SSH):
+    1. git pull origin main
+    2. npm install
+    3. npm run build
 
 Continue? [y/N]
 ```
+
+### Deployment behavior (`.smart-commit.json` → `serverCommands`)
+
+- **`localCommands`** (optional): shell commands run **on your machine** before SSH (e.g. `npm run build`, `rsync …`). If any local command fails, **remote deploy does not start**.
+- **Fail-fast**: if a **remote** SSH command fails (e.g. `git pull`), later commands (e.g. migrations) are **not** run.
+- **`server.commandTimeoutSeconds`** (optional, default **300**): each remote command over SSH is aborted after this many seconds.
+- **Rsync**: if any `localCommands` entry mentions `rsync`, the CLI checks that `rsync` is available in `PATH` before starting.
+- **Paths**: remote project directory is passed to the shell with safe quoting; SSH key paths support `~/…` via `path` + home directory resolution.
+
+See generated config from `smart-commit generate-config` for the full JSON shape (`server`, `commands`, `whitelist`, etc.).
 
 ## 🛠 Supported Projects
 
