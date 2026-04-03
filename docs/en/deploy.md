@@ -12,26 +12,30 @@ smart-commit deploy
 
 ## ⚠️ Warning
 
-The command will show a warning with the full list of commands that will be executed:
+The command shows **local** commands first (if `localCommands` is set), then **remote** commands over SSH:
 
 ```bash
-⚠️  This will execute commands on the remote server:
+⚠️  This will run local commands (if any), then remote commands over SSH:
 Server: root@211.211.211.211
 
 Commands to be executed:
+Local (this machine):
+  1. [local] npm run build
+Remote (SSH):
   1. [git] git pull origin main
   2. [frontend] npm i
-  3. [frontend] npm run build
-  4. [backend] composer install --no-dev --optimize-autoloader
-  5. [backend] php artisan optimize:clear
-  6. [database] php artisan migrate --force
-  7. [system] sudo apt-get update -y
-  8. [system] sudo apt-get install php8.3-fpm -y
-  9. [system] sudo systemctl restart php8.3-fpm
-  10. [system] sudo systemctl restart nginx
+  ...
 
 Continue? [y/N]
 ```
+
+## 🔄 Execution order and failures
+
+1. **Local** — `localCommands` run from the project root. On failure, **deploy stops** and SSH is not opened.
+2. **Remote** — SSH commands from `commands` categories. On any failure → **fail-fast**; remaining remote commands are skipped.
+3. **Timeout** — each remote command is limited by `server.commandTimeoutSeconds` (default 300s).
+
+Details: [Configuration](configuration.md#local-preparation-and-deploy-behavior).
 
 ## 📋 Command Categories
 
@@ -70,8 +74,10 @@ Create `.smart-commit.json` file in project root:
       "host": "your-server.com",
       "user": "deploy",
       "port": 22,
-      "keyPath": "~/.ssh/id_rsa"
+      "keyPath": "~/.ssh/id_rsa",
+      "commandTimeoutSeconds": 300
     },
+    "localCommands": [],
     "commands": {
       "git": ["git pull origin main"],
       "frontend": ["npm install", "npm run build"],

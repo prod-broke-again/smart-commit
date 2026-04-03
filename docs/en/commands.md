@@ -126,7 +126,7 @@ Interactive setup of all parameters.
 smart-commit deploy-smart
 ```
 
-Analyzes changes and executes only necessary commands.
+Analyzes changes and executes only necessary commands. Runs `localCommands` first (if set), then SSH; on any failure, deploy stops (fail-fast). See [Smart Deploy](smart-deploy.md).
 
 ### Full Deploy
 
@@ -134,7 +134,7 @@ Analyzes changes and executes only necessary commands.
 smart-commit deploy
 ```
 
-Executes all commands from configuration.
+Runs the full command list from configuration (local steps when configured, then SSH). See [Regular Deploy](deploy.md).
 
 ## 📊 Usage Examples
 

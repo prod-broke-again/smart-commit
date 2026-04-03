@@ -12,26 +12,31 @@ smart-commit deploy
 
 ## ⚠️ Предупреждение
 
-Команда покажет предупреждение с полным списком команд, которые будут выполнены:
+Команда покажет предупреждение: сначала **локальные** команды (если заданы в `localCommands`), затем **удалённые** по SSH:
 
 ```bash
-⚠️  This will execute commands on the remote server:
+⚠️  This will run local commands (if any), then remote commands over SSH:
 Server: root@211.211.211.211
 
 Commands to be executed:
+Local (this machine):
+  1. [local] npm run build
+Remote (SSH):
   1. [git] git pull origin main
   2. [frontend] npm i
   3. [frontend] npm run build
-  4. [backend] composer install --no-dev --optimize-autoloader
-  5. [backend] php artisan optimize:clear
-  6. [database] php artisan migrate --force
-  7. [system] sudo apt-get update -y
-  8. [system] sudo apt-get install php8.3-fpm -y
-  9. [system] sudo systemctl restart php8.3-fpm
-  10. [system] sudo systemctl restart nginx
+  ...
 
 Continue? [y/N]
 ```
+
+## 🔄 Порядок выполнения и ошибки
+
+1. **Локально** — команды из `localCommands` (рабочий каталог — корень проекта). Ошибка → деплой останавливается, SSH не вызывается.
+2. **По SSH** — команды из секций `commands` по категориям. Ошибка любой команды → **fail-fast**, дальнейшие удалённые команды не выполняются.
+3. **Таймаут** — каждая удалённая команда ограничена `server.commandTimeoutSeconds` (по умолчанию 300 с).
+
+Подробнее: [Конфигурация](configuration.md) (раздел про `localCommands` и таймауты).
 
 ## 📋 Категории команд
 
@@ -70,8 +75,10 @@ Continue? [y/N]
       "host": "your-server.com",
       "user": "deploy",
       "port": 22,
-      "keyPath": "~/.ssh/id_rsa"
+      "keyPath": "~/.ssh/id_rsa",
+      "commandTimeoutSeconds": 300
     },
+    "localCommands": [],
     "commands": {
       "git": ["git pull origin main"],
       "frontend": ["npm install", "npm run build"],

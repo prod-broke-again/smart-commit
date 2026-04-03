@@ -12,11 +12,11 @@ smart-commit deploy-smart
 
 ## 🔍 How It Works?
 
-1. **Change Analysis** - system analyzes the last commit and determines which files changed
-2. **Action Determination** - based on types of changed files, determines which commands are needed
-3. **Command Generation** - creates a list of only necessary commands
-4. **Confirmation** - user sees the list of commands and confirms execution
-5. **Execution** - commands are executed on server via SSH
+1. **Change Analysis** — analyzes the last commit and determines which files changed
+2. **Action Determination** — based on changed file types, decides which commands are needed
+3. **Command Generation** — builds the list of required **remote** commands only
+4. **Confirmation** — shows `localCommands` (if any) and remote commands; user confirms
+5. **Execution** — runs `localCommands` locally first, then remote commands over SSH. Any failure **stops the deploy** (fail-fast). Each remote command is limited by `server.commandTimeoutSeconds` (default 300s)
 
 ## 📊 File Analysis
 
@@ -51,10 +51,13 @@ smart-commit deploy-smart
   • Frontend files changed (resources/js/components/Button.vue)
   • Frontend files changed (resources/css/app.css)
 
-⚠️  Smart deployment will execute 2 commands:
+⚠️  Smart deployment will run N step(s) (local first, then remote):
 Server: root@217.198.12.212
-  1. git pull origin main
-  2. npm run build
+  Local (this machine):
+    1. npm run build
+  Remote (SSH):
+    1. git pull origin main
+    2. npm run build
 
 Continue? [y/N]
 ```
@@ -69,10 +72,11 @@ Continue? [y/N]
   • Laravel configuration changed (config/app.php)
   • Laravel configuration changed (.env)
 
-⚠️  Smart deployment will execute 2 commands:
+⚠️  Smart deployment will run N step(s) (local first, then remote):
 Server: root@217.198.12.212
-  1. git pull origin main
-  2. php artisan optimize:clear
+  Remote (SSH):
+    1. git pull origin main
+    2. php artisan optimize:clear
 
 Continue? [y/N]
 ```
@@ -86,10 +90,11 @@ Continue? [y/N]
   • Detected changes in 1 files
   • Composer dependencies changed (composer.json)
 
-⚠️  Smart deployment will execute 2 commands:
+⚠️  Smart deployment will run N step(s) (local first, then remote):
 Server: root@217.198.12.212
-  1. git pull origin main
-  2. composer install --no-dev --optimize-autoloader
+  Remote (SSH):
+    1. git pull origin main
+    2. composer install --no-dev --optimize-autoloader
 
 Continue? [y/N]
 ```
@@ -121,8 +126,10 @@ Create `.smart-commit.json` file in project root:
       "host": "your-server.com",
       "user": "deploy",
       "port": 22,
-      "keyPath": "~/.ssh/id_rsa"
+      "keyPath": "~/.ssh/id_rsa",
+      "commandTimeoutSeconds": 300
     },
+    "localCommands": [],
     "commands": {
       "git": ["git pull origin main"],
       "frontend": ["npm install", "npm run build"],
@@ -146,7 +153,11 @@ Create `.smart-commit.json` file in project root:
 | `server.user` | SSH user | Yes |
 | `server.port` | SSH port (default 22) | No |
 | `server.keyPath` | Path to SSH key | No |
+| `server.commandTimeoutSeconds` | Max seconds per remote command (default 300) | No |
+| `localCommands` | Commands on your machine before SSH | No |
 | `whitelist` | Allowed commands | Yes |
+
+See also: [Configuration — local preparation and behavior](configuration.md#local-preparation-and-deploy-behavior).
 
 ## 🔒 Security
 

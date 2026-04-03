@@ -99,8 +99,10 @@ The `.smart-commit.json` file should be located in the project root.
       "host": "server.com",
       "user": "deploy",
       "port": 22,
-      "keyPath": "~/.ssh/id_rsa"
+      "keyPath": "~/.ssh/id_rsa",
+      "commandTimeoutSeconds": 300
     },
+    "localCommands": ["npm run build"],
     "commands": {
       "git": ["git pull origin main"],
       "frontend": ["npm install", "npm run build"],
@@ -208,7 +210,18 @@ This command:
 | `server.host` | Server IP or domain | Yes |
 | `server.user` | SSH user | Yes |
 | `server.port` | SSH port | No (22) |
-| `server.keyPath` | Path to SSH key | No |
+| `server.keyPath` | Path to SSH key (`~/...` is resolved against your home directory) | No |
+| `server.commandTimeoutSeconds` | Max seconds per **remote** SSH command (default `300`) | No |
+| `localCommands` | Shell commands on **your machine** before SSH connects | No |
+
+### Local preparation and deploy behavior
+
+- **`localCommands`** — run sequentially from the project root (directory containing `.smart-commit.json`). Use for `npm run build`, `rsync`, etc. If any command fails, **the remote deploy never starts**.
+- **Fail-fast (remote)** — if any SSH command fails (e.g. `git pull`), **remaining commands are skipped** (no migrations, etc.).
+- **Timeout** — each remote command is aborted after `server.commandTimeoutSeconds` (default 300s).
+- **Rsync** — if any `localCommands` entry contains the word `rsync`, the CLI checks that `rsync` exists in `PATH` before starting.
+- **Remote paths** — `projectPath` is passed to the remote shell using safe quoting so spaces/special characters in the path do not break `cd`.
+- **Secrets** — do not commit npm tokens in `.npmrc`; add `.npmrc` to `.gitignore` and use env vars or local-only files.
 
 ### Command Categories
 

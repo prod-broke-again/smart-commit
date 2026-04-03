@@ -99,8 +99,10 @@ smart-commit config --global --set apiKeys.timeweb=tw-...
       "host": "server.com",
       "user": "deploy",
       "port": 22,
-      "keyPath": "~/.ssh/id_rsa"
+      "keyPath": "~/.ssh/id_rsa",
+      "commandTimeoutSeconds": 300
     },
+    "localCommands": ["npm run build"],
     "commands": {
       "git": ["git pull origin main"],
       "frontend": ["npm install", "npm run build"],
@@ -208,7 +210,18 @@ smart-commit generate-config
 | `server.host` | IP или домен сервера | Да |
 | `server.user` | Пользователь для SSH | Да |
 | `server.port` | Порт SSH | Нет (22) |
-| `server.keyPath` | Путь к SSH ключу | Нет |
+| `server.keyPath` | Путь к SSH ключу (`~/...` разворачивается в домашний каталог) | Нет |
+| `server.commandTimeoutSeconds` | Лимит времени на **одну удалённую** команду по SSH (секунды), по умолчанию `300` | Нет |
+| `localCommands` | Массив shell-команд на **вашей машине** до подключения по SSH | Нет |
+
+### Локальная подготовка и поведение деплоя
+
+- **`localCommands`** — выполняются по очереди в корне проекта (`cwd` = каталог с `.smart-commit.json`). Подходит для `npm run build`, `rsync` и т.п. Если любая команда завершилась с ошибкой, **удалённый деплой не начинается**.
+- **Fail-fast (удалённые команды)** — при ошибке любой SSH-команды (например, `git pull`) следующие команды **не выполняются** (миграции и остальное не запускаются).
+- **Таймаут** — каждая удалённая команда прерывается по истечении `server.commandTimeoutSeconds` (по умолчанию 300 с).
+- **Rsync** — если в `localCommands` есть слово `rsync`, перед деплоем проверяется наличие `rsync` в `PATH`.
+- **Пути на сервере** — каталог `projectPath` передаётся в удалённую оболочку в безопасном quoting (пробелы и спецсимволы в пути не ломают `cd`).
+- **Секреты** — не храните токены npm в `.npmrc` в репозитории; добавьте `.npmrc` в `.gitignore` и используйте переменные окружения или локальные файлы вне Git.
 
 ### Категории команд
 

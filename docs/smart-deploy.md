@@ -12,11 +12,11 @@ smart-commit deploy-smart
 
 ## 🔍 Как это работает?
 
-1. **Анализ изменений** - система анализирует последний коммит и определяет, какие файлы изменились
-2. **Определение действий** - на основе типов измененных файлов определяется, какие команды нужны
-3. **Генерация команд** - создается список только необходимых команд
-4. **Подтверждение** - пользователь видит список команд и подтверждает выполнение
-5. **Выполнение** - команды выполняются на сервере через SSH
+1. **Анализ изменений** — система анализирует последний коммит и определяет, какие файлы изменились
+2. **Определение действий** — на основе типов изменённых файлов определяется, какие команды нужны
+3. **Генерация команд** — создаётся список только необходимых **удалённых** команд
+4. **Подтверждение** — показываются локальные команды (`localCommands`, если есть) и удалённые; пользователь подтверждает
+5. **Выполнение** — сначала `localCommands` на вашей машине, затем команды на сервере по SSH. Ошибка на любом шаге останавливает процесс (**fail-fast**); таймаут на удалённые команды — `server.commandTimeoutSeconds` (по умолчанию 300 с)
 
 ## 📊 Анализ файлов
 
@@ -51,10 +51,13 @@ smart-commit deploy-smart
   • Frontend files changed (resources/js/components/Button.vue)
   • Frontend files changed (resources/css/app.css)
 
-⚠️  Smart deployment will execute 2 commands:
+⚠️  Smart deployment will run N step(s) (local first, then remote):
 Server: root@217.198.12.212
-  1. git pull origin main
-  2. npm run build
+  Local (this machine):
+    1. npm run build
+  Remote (SSH):
+    1. git pull origin main
+    2. npm run build
 
 Continue? [y/N]
 ```
@@ -69,10 +72,11 @@ Continue? [y/N]
   • Laravel configuration changed (config/app.php)
   • Laravel configuration changed (.env)
 
-⚠️  Smart deployment will execute 2 commands:
+⚠️  Smart deployment will run N step(s) (local first, then remote):
 Server: root@217.198.12.212
-  1. git pull origin main
-  2. php artisan optimize:clear
+  Remote (SSH):
+    1. git pull origin main
+    2. php artisan optimize:clear
 
 Continue? [y/N]
 ```
@@ -86,10 +90,11 @@ Continue? [y/N]
   • Detected changes in 1 files
   • Composer dependencies changed (composer.json)
 
-⚠️  Smart deployment will execute 2 commands:
+⚠️  Smart deployment will run N step(s) (local first, then remote):
 Server: root@217.198.12.212
-  1. git pull origin main
-  2. composer install --no-dev --optimize-autoloader
+  Remote (SSH):
+    1. git pull origin main
+    2. composer install --no-dev --optimize-autoloader
 
 Continue? [y/N]
 ```
@@ -121,8 +126,10 @@ Continue? [y/N]
       "host": "your-server.com",
       "user": "deploy",
       "port": 22,
-      "keyPath": "~/.ssh/id_rsa"
+      "keyPath": "~/.ssh/id_rsa",
+      "commandTimeoutSeconds": 300
     },
+    "localCommands": [],
     "commands": {
       "git": ["git pull origin main"],
       "frontend": ["npm install", "npm run build"],
@@ -146,7 +153,11 @@ Continue? [y/N]
 | `server.user` | Пользователь для SSH | Да |
 | `server.port` | Порт SSH (по умолчанию 22) | Нет |
 | `server.keyPath` | Путь к SSH ключу | Нет |
+| `server.commandTimeoutSeconds` | Лимит (сек) на одну удалённую команду (по умолчанию 300) | Нет |
+| `localCommands` | Команды локально до SSH | Нет |
 | `whitelist` | Разрешенные команды | Да |
+
+См. также: [Конфигурация — локальная подготовка и поведение](configuration.md).
 
 ## 🔒 Безопасность
 

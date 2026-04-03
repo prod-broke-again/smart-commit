@@ -34,6 +34,7 @@ Welcome to the Smart Commit AI documentation! Here you'll find all the informati
 - **🌍 Multi-language** - English and Russian languages
 - **🔧 Smart Deploy** - Analyze changes and execute only necessary commands
 - **⚡ Fast Deploy** - Full deployment of all commands
+- **📦 Local preparation** - `localCommands` (build, rsync) before SSH; fail-fast; per-command remote timeout
 - **🎯 Project Analysis** - Automatic project type detection
 - **🔑 Multiple API Keys** - Store keys for different providers simultaneously
 - **📁 Project Settings** - Override global settings per project
@@ -66,7 +67,7 @@ We welcome documentation improvements! If you found an error or want to add some
 
 ---
 
-**Documentation Version:** 1.0.13  
-**Last Updated:** December 2025  
+**Documentation Version:** 1.0.14  
+**Last Updated:** April 2026  
 **Author:** [Eugene (prod-broke-again)](https://github.com/prod-broke-again)
 
