@@ -1,6 +1,10 @@
 import { Client } from 'ssh2';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { ServerCommandsConfig } from './ProjectAnalyzer';
 import chalk from 'chalk';
+import { execAsync } from '../../utils/exec';
 
 export interface SshExecutionResult {
   success: boolean;
@@ -8,53 +12,123 @@ export interface SshExecutionResult {
   error?: string;
 }
 
+const DEFAULT_REMOTE_COMMAND_TIMEOUT_SECONDS = 300;
+
 export class ServerCommandExecutor {
   /**
-   * Execute smart commands via SSH
+   * Bash-safe single-quoted string for `cd` on the remote shell (POSIX sh).
+   */
+  public static shellQuoteBashSingle(remotePath: string): string {
+    return `'${remotePath.replace(/'/g, `'\\''`)}'`;
+  }
+
+  /**
+   * Full remote line as sent over SSH (for debugging / dry-run style output).
+   */
+  public static buildRemoteShellLine(remoteProjectPath: string, command: string): string {
+    const safeCd = ServerCommandExecutor.shellQuoteBashSingle(remoteProjectPath);
+    return `cd ${safeCd} && ${command}`;
+  }
+
+  /**
+   * Resolve ~/.ssh/id_rsa style paths using homedir + path.resolve.
+   */
+  private static resolveSshKeyPath(keyPath: string): string {
+    if (keyPath === '~' || keyPath === '~/' || keyPath === '~\\') {
+      return os.homedir();
+    }
+    if (keyPath.startsWith('~/') || keyPath.startsWith('~\\')) {
+      const rest = keyPath.slice(2);
+      return path.resolve(path.join(os.homedir(), rest));
+    }
+    return path.resolve(keyPath);
+  }
+
+  private getRemoteCommandTimeoutSeconds(server: ServerCommandsConfig['server']): number {
+    const raw = server?.commandTimeoutSeconds;
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+      return raw;
+    }
+    return DEFAULT_REMOTE_COMMAND_TIMEOUT_SECONDS;
+  }
+
+  /**
+   * If localCommands use rsync, ensure rsync exists in PATH before starting deploy.
+   */
+  public async validateLocalDeployPrerequisites(localCommands?: string[]): Promise<string[]> {
+    const cmds = localCommands ?? [];
+    const needsRsync = cmds.some(c => /\brsync\b/i.test(c));
+    if (!needsRsync) {
+      return [];
+    }
+    try {
+      await execAsync('rsync --version', { timeout: 8000 });
+    } catch {
+      return [
+        'localCommands reference rsync, but rsync was not found in PATH. Install rsync or adjust localCommands.'
+      ];
+    }
+    return [];
+  }
+
+  /**
+   * Execute smart commands: optional local preparation, then SSH.
    */
   public async executeSmartCommands(
     config: ServerCommandsConfig,
     commands: string[],
-    projectPath?: string
+    remoteProjectPath?: string,
+    localProjectRoot: string = process.cwd()
   ): Promise<SshExecutionResult[]> {
     if (!config.enabled || !config.server) {
       throw new Error('Server commands are disabled or server configuration is missing');
     }
 
-    // Use projectPath from config if not provided
-    const finalProjectPath = projectPath || config.projectPath || '/var/www/html';
-
+    const finalRemotePath = remoteProjectPath || config.projectPath || '/var/www/html';
     const results: SshExecutionResult[] = [];
+    const localCommands = config.localCommands ?? [];
 
-    console.log(chalk.blue(`\n🚀 Executing ${commands.length} smart commands on server...`));
+    if (localCommands.length > 0) {
+      console.log(chalk.cyan('\n📦 Local preparation'));
+      console.log(chalk.gray(`Working directory: ${localProjectRoot}\n`));
+      await this.executeLocalCommands(localProjectRoot, localCommands, results);
+    }
+
+    const timeoutSec = this.getRemoteCommandTimeoutSeconds(config.server);
+
+    console.log(chalk.blue(`\n🚀 Remote: ${commands.length} smart command(s)`));
     console.log(chalk.gray(`Server: ${config.server.user}@${config.server.host}:${config.server.port || 22}`));
-    console.log(chalk.gray(`Project path: ${finalProjectPath}\n`));
+    console.log(chalk.gray(`Project path (remote): ${finalRemotePath}`));
+    console.log(chalk.gray(`Timeout per command: ${timeoutSec}s\n`));
 
-    // Execute commands via SSH
-    await this.executeViaSsh(config.server, finalProjectPath, commands.map(cmd => ({ category: 'smart', command: cmd })), results);
+    await this.executeViaSsh(
+      config.server,
+      finalRemotePath,
+      commands.map(cmd => ({ category: 'smart', command: cmd })),
+      results,
+      timeoutSec
+    );
 
     return results;
   }
 
   /**
-   * Execute server commands via SSH
+   * Execute server commands: optional local preparation, then SSH.
    */
   public async executeCommands(
     config: ServerCommandsConfig,
-    projectPath?: string
+    remoteProjectPath?: string,
+    localProjectRoot: string = process.cwd()
   ): Promise<SshExecutionResult[]> {
     if (!config.enabled || !config.server) {
       throw new Error('Server commands are disabled or server configuration is missing');
     }
 
-    // Use projectPath from config if not provided
-    const finalProjectPath = projectPath || config.projectPath || '/var/www/html';
-
+    const finalRemotePath = remoteProjectPath || config.projectPath || '/var/www/html';
     const results: SshExecutionResult[] = [];
-    
-    // Collect all commands in order
+
     const allCommands: { category: string; command: string }[] = [];
-    
+
     if (config.commands.git) {
       config.commands.git.forEach(cmd => allCommands.push({ category: 'git', command: cmd }));
     }
@@ -74,14 +148,61 @@ export class ServerCommandExecutor {
       config.commands.system.forEach(cmd => allCommands.push({ category: 'system', command: cmd }));
     }
 
-    console.log(chalk.blue(`\n🚀 Executing ${allCommands.length} commands on server...`));
-    console.log(chalk.gray(`Server: ${config.server.user}@${config.server.host}:${config.server.port || 22}`));
-    console.log(chalk.gray(`Project path: ${finalProjectPath}\n`));
+    const localCommands = config.localCommands ?? [];
+    if (localCommands.length > 0) {
+      console.log(chalk.cyan('\n📦 Local preparation'));
+      console.log(chalk.gray(`Working directory: ${localProjectRoot}\n`));
+      await this.executeLocalCommands(localProjectRoot, localCommands, results);
+    }
 
-    // Execute commands via SSH
-    await this.executeViaSsh(config.server, finalProjectPath, allCommands, results);
+    const timeoutSec = this.getRemoteCommandTimeoutSeconds(config.server);
+
+    console.log(chalk.blue(`\n🚀 Remote: ${allCommands.length} command(s)`));
+    console.log(chalk.gray(`Server: ${config.server.user}@${config.server.host}:${config.server.port || 22}`));
+    console.log(chalk.gray(`Project path (remote): ${finalRemotePath}`));
+    console.log(chalk.gray(`Timeout per command: ${timeoutSec}s\n`));
+
+    await this.executeViaSsh(config.server, finalRemotePath, allCommands, results, timeoutSec);
 
     return results;
+  }
+
+  private async executeLocalCommands(
+    localRoot: string,
+    commands: string[],
+    results: SshExecutionResult[]
+  ): Promise<void> {
+    for (let i = 0; i < commands.length; i++) {
+      const command = commands[i];
+      console.log(chalk.yellow(`[local ${i + 1}/${commands.length}] ${command}`));
+      try {
+        const { stdout, stderr } = await execAsync(command, {
+          cwd: localRoot,
+          maxBuffer: 10 * 1024 * 1024
+        });
+        const out = stdout.trim();
+        const err = stderr.trim();
+        if (out) {
+          console.log(chalk.gray(out));
+        }
+        if (err) {
+          console.log(chalk.gray(err));
+        }
+        results.push({ success: true, output: out, error: err || undefined });
+        console.log(chalk.green(`✓ Local success: ${command}`));
+      } catch (e: unknown) {
+        const execErr = e as { message?: string; stdout?: string; stderr?: string; code?: number };
+        const msg = execErr.stderr?.trim() || execErr.stdout?.trim() || execErr.message || String(e);
+        results.push({
+          success: false,
+          output: execErr.stdout?.trim() || '',
+          error: msg
+        });
+        console.log(chalk.red(`✗ Local failed: ${command}`));
+        console.log(chalk.red(msg));
+        throw new Error(`Local command failed: ${command} (${msg})`);
+      }
+    }
   }
 
   /**
@@ -91,16 +212,16 @@ export class ServerCommandExecutor {
     server: ServerCommandsConfig['server'],
     projectPath: string,
     commands: { category: string; command: string }[],
-    results: SshExecutionResult[]
+    results: SshExecutionResult[],
+    commandTimeoutSeconds: number
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const conn = new Client();
-      
+
       conn.on('ready', () => {
         console.log(chalk.green('✓ Connected to server'));
-        
-        // Execute commands sequentially
-        this.executeCommandsSequentially(conn, projectPath, commands, results)
+
+        this.executeCommandsSequentially(conn, projectPath, commands, results, commandTimeoutSeconds)
           .then(() => {
             conn.end();
             resolve();
@@ -116,13 +237,12 @@ export class ServerCommandExecutor {
         reject(err);
       });
 
-      // Connect to server
+      const keyPath = server!.keyPath;
       const connectionConfig = {
         host: server!.host,
         port: server!.port || 22,
         username: server!.user,
-        privateKey: server!.keyPath ? require('fs').readFileSync(server!.keyPath.replace('~', require('os').homedir())) : undefined,
-        // For password authentication (if no key provided)
+        privateKey: keyPath ? fs.readFileSync(ServerCommandExecutor.resolveSshKeyPath(keyPath)) : undefined,
         password: process.env['SSH_PASSWORD'],
       };
 
@@ -131,63 +251,55 @@ export class ServerCommandExecutor {
   }
 
   /**
-   * Execute commands sequentially
+   * Execute commands sequentially (fail-fast on any error)
    */
   private async executeCommandsSequentially(
     conn: Client,
     projectPath: string,
     commands: { category: string; command: string }[],
-    results: SshExecutionResult[]
+    results: SshExecutionResult[],
+    commandTimeoutSeconds: number
   ): Promise<void> {
     for (let i = 0; i < commands.length; i++) {
       const { category, command } = commands[i];
-      
-      console.log(chalk.yellow(`[${i + 1}/${commands.length}] ${category}: ${command}`));
-      
+
+      console.log(chalk.yellow(`[remote ${i + 1}/${commands.length}] ${category}: ${command}`));
+
       try {
-        const result = await this.executeSingleCommand(conn, projectPath, command);
+        const result = await this.executeSingleCommand(conn, projectPath, command, commandTimeoutSeconds);
         results.push(result);
-        
-        if (result.success) {
-          console.log(chalk.green(`✓ Success: ${command}`));
-        } else {
+
+        if (!result.success) {
+          const detail = result.error || 'non-zero exit code';
           console.log(chalk.red(`✗ Failed: ${command}`));
-          console.log(chalk.red(`Error: ${result.error}`));
-          
-          // Ask user if they want to continue
-          if (!await this.askContinueOnError()) {
-            throw new Error(`Command failed: ${command}`);
-          }
+          console.log(chalk.red(`Error: ${detail}`));
+          throw new Error(`Command failed: ${command} (${detail})`);
         }
+        console.log(chalk.green(`✓ Success: ${command}`));
       } catch (error) {
-        const errorResult: SshExecutionResult = {
-          success: false,
-          output: '',
-          error: error instanceof Error ? error.message : String(error)
-        };
-        results.push(errorResult);
-        
-        console.log(chalk.red(`✗ Error: ${command}`));
-        console.log(chalk.red(`Error: ${errorResult.error}`));
-        
-        if (!await this.askContinueOnError()) {
-          throw error;
+        const err = error instanceof Error ? error : new Error(String(error));
+        if (!err.message.startsWith('Command failed:')) {
+          console.log(chalk.red(`✗ Error: ${command}`));
+          console.log(chalk.red(`Error: ${err.message}`));
         }
+        throw err;
       }
     }
   }
 
   /**
-   * Execute a single command via SSH
+   * Execute a single command via SSH (with per-command timeout)
    */
   private async executeSingleCommand(
     conn: Client,
     projectPath: string,
-    command: string
+    command: string,
+    commandTimeoutSeconds: number
   ): Promise<SshExecutionResult> {
+    const fullCommand = ServerCommandExecutor.buildRemoteShellLine(projectPath, command);
+    const timeoutMs = Math.max(1, commandTimeoutSeconds) * 1000;
+
     return new Promise((resolve) => {
-      const fullCommand = `cd ${projectPath} && ${command}`;
-      
       conn.exec(fullCommand, (err, stream) => {
         if (err) {
           resolve({
@@ -200,12 +312,49 @@ export class ServerCommandExecutor {
 
         let output = '';
         let errorOutput = '';
+        let settled = false;
 
-        stream.on('close', (code: number) => {
+        const timer = setTimeout(() => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          try {
+            stream.destroy();
+          } catch {
+            /* ignore */
+          }
           resolve({
-            success: code === 0,
+            success: false,
             output: output.trim(),
-            error: errorOutput.trim() || undefined
+            error: `Command timed out after ${commandTimeoutSeconds}s`
+          });
+        }, timeoutMs);
+
+        stream.on('error', (streamErr: Error) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timer);
+          resolve({
+            success: false,
+            output: output.trim(),
+            error: streamErr.message
+          });
+        });
+
+        stream.on('close', (code: number | null) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timer);
+          const ok = code === 0;
+          resolve({
+            success: ok,
+            output: output.trim(),
+            error: errorOutput.trim() || (ok ? undefined : `exit code ${code ?? 'unknown'}`)
           });
         });
 
@@ -218,14 +367,6 @@ export class ServerCommandExecutor {
         });
       });
     });
-  }
-
-  /**
-   * Ask user if they want to continue on error
-   */
-  private async askContinueOnError(): Promise<boolean> {
-    // For now, always continue (can be made interactive later)
-    return true;
   }
 
   /**
@@ -249,6 +390,11 @@ export class ServerCommandExecutor {
 
     if (!config.server.keyPath && !process.env['SSH_PASSWORD']) {
       errors.push('Either SSH key path or SSH_PASSWORD environment variable is required');
+    }
+
+    const t = config.server.commandTimeoutSeconds;
+    if (t !== undefined && (typeof t !== 'number' || !Number.isFinite(t) || t <= 0)) {
+      errors.push('server.commandTimeoutSeconds must be a positive number');
     }
 
     return errors;

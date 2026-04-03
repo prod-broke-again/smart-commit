@@ -38,7 +38,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/prod-broke-again/smart-commit.git"
+    "url": "git+https://github.com/prod-broke-again/smart-commit.git"
   },
   "bugs": {
     "url": "https://github.com/prod-broke-again/smart-commit/issues"

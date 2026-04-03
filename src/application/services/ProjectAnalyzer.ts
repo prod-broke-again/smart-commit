@@ -29,11 +29,15 @@ export interface ServerCommandsConfig {
   enabled: boolean;
   autoExecute: boolean;
   projectPath?: string;
+  /** Run on the developer machine before SSH (e.g. npm run build, rsync). */
+  localCommands?: string[];
   server?: {
     host: string;
     user: string;
     port?: number;
     keyPath?: string;
+    /** Max seconds per remote SSH command (default 300). */
+    commandTimeoutSeconds?: number;
   };
   commands: {
     git?: string[];
@@ -324,16 +328,20 @@ CRITICAL REQUIREMENTS - Generate commands based on ACTUAL project setup:
 6. DATABASE: Include "php artisan migrate --force" if database folder exists or Laravel detected
 7. QUEUE: Include "php artisan queue:restart" if queue workers detected
 
+LOCAL COMMANDS (optional): "localCommands" is an array of shell commands to run on the developer machine BEFORE connecting via SSH (e.g. "npm run build", "rsync ..."). Use [] if not needed.
+
 Return ONLY valid JSON (no explanations, no markdown):
 {
   "enabled": true,
   "autoExecute": false,
   "projectPath": "/var/www/html",
+  "localCommands": ["npm run build"],
   "server": {
     "host": "example.com",
     "user": "deploy",
     "port": 22,
-    "keyPath": "~/.ssh/id_rsa"
+    "keyPath": "~/.ssh/id_rsa",
+    "commandTimeoutSeconds": 300
   },
   "commands": {
     "git": ["git pull origin main"],

@@ -319,6 +319,11 @@ export class SmartCommitCli {
         throw new Error(`Invalid server configuration: ${validationErrors.join(', ')}`);
       }
 
+      const localPreErrors = await executor.validateLocalDeployPrerequisites(serverConfig.localCommands);
+      if (localPreErrors.length > 0) {
+        throw new Error(localPreErrors.join(' '));
+      }
+
       console.log(chalk.blue('🔍 Analyzing changes for smart deployment...'));
 
       // Analyze changes - use project type from config if available
@@ -348,11 +353,19 @@ export class SmartCommitCli {
         return;
       }
 
-      console.log(chalk.yellow(`\n⚠️  Smart deployment will execute ${smartCommands.length} commands:`));
+      const localPreview = serverConfig.localCommands ?? [];
+      const totalSteps = localPreview.length + smartCommands.length;
+      console.log(chalk.yellow(`\n⚠️  Smart deployment will run ${totalSteps} step(s) (local first, then remote):`));
       console.log(chalk.gray(`Server: ${serverConfig.server?.user}@${serverConfig.server?.host}`));
-      
+      if (localPreview.length > 0) {
+        console.log(chalk.cyan('  Local (this machine):'));
+        localPreview.forEach((command: string, index: number) => {
+          console.log(chalk.gray(`    ${index + 1}. ${command}`));
+        });
+      }
+      console.log(chalk.blue('  Remote (SSH):'));
       smartCommands.forEach((command, index) => {
-        console.log(chalk.gray(`  ${index + 1}. ${command}`));
+        console.log(chalk.gray(`    ${index + 1}. ${command}`));
       });
 
       console.log(chalk.yellow('\nContinue? [y/N]'));
@@ -364,10 +377,12 @@ export class SmartCommitCli {
         return;
       }
 
-      // Execute smart commands
-      console.log(chalk.blue(`\n🚀 Executing ${smartCommands.length} smart commands...`));
-      
-      const results = await executor.executeSmartCommands(serverConfig, smartCommands, serverConfig.projectPath);
+      const results = await executor.executeSmartCommands(
+        serverConfig,
+        smartCommands,
+        serverConfig.projectPath,
+        projectPath
+      );
       
       // Show summary
       const successCount = results.filter(r => r.success).length;
@@ -422,13 +437,25 @@ export class SmartCommitCli {
         throw new Error('Invalid server configuration');
       }
 
+      const localPreErrors = await executor.validateLocalDeployPrerequisites(serverConfig.localCommands);
+      if (localPreErrors.length > 0) {
+        throw new Error(localPreErrors.join(' '));
+      }
+
       // Ask for confirmation
-      console.log(chalk.yellow('\n⚠️  This will execute commands on the remote server:'));
+      console.log(chalk.yellow('\n⚠️  This will run local commands (if any), then remote commands over SSH:'));
       console.log(chalk.gray(`Server: ${serverConfig.server?.user}@${serverConfig.server?.host}`));
       
       if (!serverConfig.autoExecute) {
         console.log(chalk.yellow('\nCommands to be executed:'));
-        
+        const localCmds = serverConfig.localCommands ?? [];
+        if (localCmds.length > 0) {
+          console.log(chalk.cyan('Local (this machine):'));
+          localCmds.forEach((cmd: string, index: number) => {
+            console.log(chalk.gray(`  ${index + 1}. [local] ${cmd}`));
+          });
+        }
+
         const allCommands: { category: string; command: string }[] = [];
         if (serverConfig.commands.git) {
           serverConfig.commands.git.forEach((cmd: string) => allCommands.push({ category: 'git', command: cmd }));
@@ -449,6 +476,9 @@ export class SmartCommitCli {
           serverConfig.commands.system.forEach((cmd: string) => allCommands.push({ category: 'system', command: cmd }));
         }
 
+        if (allCommands.length > 0) {
+          console.log(chalk.blue('Remote (SSH):'));
+        }
         allCommands.forEach(({ category, command }, index) => {
           console.log(chalk.gray(`  ${index + 1}. [${category}] ${command}`));
         });
@@ -463,8 +493,7 @@ export class SmartCommitCli {
         }
       }
 
-      // Execute commands
-      const results = await executor.executeCommands(serverConfig, serverConfig.projectPath);
+      const results = await executor.executeCommands(serverConfig, serverConfig.projectPath, projectPath);
       
       // Show summary
       const successCount = results.filter(r => r.success).length;
