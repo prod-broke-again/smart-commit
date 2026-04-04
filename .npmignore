@@ -4,6 +4,9 @@ tests/
 *.test.ts
 *.spec.ts
 
+# Local CLI config (copy from docs; never publish real servers)
+.smart-commit.json
+
 # Development files
 .git/
 .github/

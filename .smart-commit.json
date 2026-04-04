@@ -2,31 +2,22 @@
   "serverCommands": {
     "enabled": true,
     "autoExecute": false,
-    "projectPath": "/var/www/fordaq",
+    "projectPath": "/var/www/example-app",
     "server": {
-      "host": "217.198.12.212",
-      "user": "root",
+      "host": "203.0.113.10",
+      "user": "deploy",
       "port": 22,
-      "keyPath": "~/.ssh/id_cursor"
+      "keyPath": "~/.ssh/id_rsa"
     },
     "commands": {
       "git": ["git pull origin main"],
-      "frontend": [
-        "npm i",
-        "npm run build"
-      ],
-      "backend": [
-        "php artisan optimize:clear"
-      ],
-      "database": [
-        "php artisan migrate --force"
-      ],
+      "frontend": ["npm ci", "npm run build"],
+      "backend": ["php artisan optimize:clear"],
+      "database": ["php artisan migrate --force"],
       "docker": [],
       "system": [
-        "sudo apt-get update -y",
-        "sudo apt-get install php8.3-fpm -y",
-        "sudo systemctl restart php8.3-fpm",
-        "sudo systemctl restart nginx"
+        "sudo systemctl reload php8.3-fpm",
+        "sudo systemctl reload nginx"
       ]
     },
     "whitelist": [
