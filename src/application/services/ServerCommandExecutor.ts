@@ -299,8 +299,29 @@ export class ServerCommandExecutor {
         const result = await this.executeSingleCommand(conn, projectPath, command, commandTimeoutSeconds);
         results.push(result);
 
-        if (!result.success) {
-          const detail = result.error || 'non-zero exit code';
+        if (result.success && this.isGitPullCommand(command)) {
+          const mergeState = await this.executeSingleCommand(
+            conn,
+            projectPath,
+            'if [ -f .git/MERGE_HEAD ]; then echo "__MERGE_HEAD_PRESENT__"; else echo "__NO_MERGE_HEAD__"; fi',
+            commandTimeoutSeconds
+          );
+
+          if (!mergeState.success || mergeState.output.includes('__MERGE_HEAD_PRESENT__')) {
+            const mergeError =
+              'git pull ended with unfinished merge state (MERGE_HEAD present). Resolve merge manually on server and re-run deploy.';
+            const failedResult: SshExecutionResult = {
+              success: false,
+              output: `${result.output}\n${mergeState.output}`.trim(),
+              error: mergeError
+            };
+            results[results.length - 1] = failedResult;
+          }
+        }
+
+        if (!results[results.length - 1].success) {
+          const failed = results[results.length - 1];
+          const detail = failed.error || 'non-zero exit code';
           console.log(chalk.red(`✗ Failed: ${command}`));
           console.log(chalk.red(`Error: ${detail}`));
           throw new Error(`Command failed: ${command} (${detail})`);
@@ -315,6 +336,10 @@ export class ServerCommandExecutor {
         throw err;
       }
     }
+  }
+
+  private isGitPullCommand(command: string): boolean {
+    return /^\s*git\s+pull(\s|$)/i.test(command);
   }
 
   /**
