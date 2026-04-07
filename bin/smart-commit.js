@@ -32,7 +32,8 @@ Examples:
   $ smart-commit -m "feat: add auth" # Custom message
   $ smart-commit config --list     # Show configuration
   $ smart-commit generate-config   # Setup deployment
-  $ smart-commit deploy-smart      # Smart deployment
+  $ smart-commit deploy            # Smart deployment (git diff analysis)
+  $ smart-commit deploy --full     # Full deployment (all command categories)
 
 For more info: https://github.com/prod-broke-again/smart-commit
 `);
@@ -164,29 +165,31 @@ program
     }
   });
 
-// Deploy command
+// Deploy command (smart by default, --full for legacy full run)
 program
   .command('deploy')
-  .description('🚀 Execute server commands via SSH')
-  .summary('Deploy with full command set')
-  .action(async () => {
+  .description('🧠 Deploy: smart mode by default (git diff analysis), or --full for all commands')
+  .summary('Smart deploy (use --full for all commands)')
+  .option('--full', 'Run all command categories (git/frontend/backend/database/system) without smart analysis')
+  .action(async (options) => {
     try {
       const cli = new SmartCommitCli();
-      await cli.deployServer();
+      await cli.deploy(options.full ? 'full' : 'smart');
     } catch (error) {
       program.error(error.message);
     }
   });
 
-// Smart deploy command
+// Smart deploy command (kept as alias, deprecated)
 program
   .command('deploy-smart')
-  .description('🧠 Execute only necessary server commands based on changes')
-  .summary('Smart deploy based on git diff')
+  .description('🧠 [Deprecated: use "deploy" instead] Smart deploy based on git diff')
+  .summary('Alias for "deploy" (deprecated)')
   .action(async () => {
     try {
       const cli = new SmartCommitCli();
-      await cli.deploySmart();
+      console.warn('⚠️  "deploy-smart" is deprecated. Use "smart-commit deploy" instead.');
+      await cli.deploy('smart');
     } catch (error) {
       program.error(error.message);
     }

@@ -4,7 +4,9 @@
   "description": "Smart Commit Tool - глобальный инструмент для генерации осмысленных сообщений коммитов с использованием ИИ",
   "main": "lib/index.js",
   "bin": {
-    "smart-commit": "bin/smart-commit.js"
+    "smart-commit": "bin/smart-commit.js",
+    "smc": "bin/smart-commit.js",
+    "smit": "bin/smart-commit.js"
   },
   "scripts": {
     "build": "tsc",

@@ -120,21 +120,42 @@ smart-commit setup
 
 ## 🚀 Команды деплоя
 
-### Умный деплой
-
-```bash
-smart-commit deploy-smart
-```
-
-Анализирует изменения и выполняет только необходимые команды. Сначала выполняются `localCommands` (если заданы), затем команды по SSH; при ошибке — остановка (fail-fast). Подробнее: [Умный деплой](smart-deploy.md).
-
-### Полный деплой
+### Умный деплой (по умолчанию)
 
 ```bash
 smart-commit deploy
 ```
 
-Выполняет все команды из конфигурации (локально при необходимости, затем по SSH). См. [Обычный деплой](deploy.md).
+Анализирует `git diff` и запускает только нужные remote-команды. Всегда выполняет `localCommands` первыми (если заданы). При ошибке — остановка (fail-fast). Подробнее: [Деплой](deploy.md).
+
+### Полный деплой
+
+```bash
+smart-commit deploy --full
+```
+
+Выполняет все категории команд из конфигурации (`git`, `frontend`, `backend`, `database`, `docker`, `system`) без smart-анализа. Полезно для первоначального деплоя или CI/CD.
+
+### Локальная сборка фронтенда + загрузка на сервер
+
+Добавьте `localCommands` в `.smart-commit.json` — они выполняются на вашей машине **до** SSH:
+
+```json
+{
+  "serverCommands": {
+    "localCommands": [
+      "npm run build",
+      "scp -r public/build deploy@203.0.113.10:/var/www/example-app/public/build"
+    ]
+  }
+}
+```
+
+### Устаревший алиас
+
+```bash
+smart-commit deploy-smart   # то же, что deploy; выводит предупреждение об устаревании
+```
 
 ## 📊 Примеры использования
 
@@ -147,8 +168,8 @@ git add .
 # 2. Сгенерировать и создать коммит
 smart-commit
 
-# 3. Умный деплой
-smart-commit deploy-smart
+# 3. Умный деплой (только нужные команды по git diff)
+smart-commit deploy
 ```
 
 ### Работа с ветками
@@ -165,8 +186,8 @@ smart-commit
 git checkout main
 git merge feature/new-feature
 
-# Деплой
-smart-commit deploy-smart
+# Умный деплой
+smart-commit deploy
 ```
 
 ### Отладка

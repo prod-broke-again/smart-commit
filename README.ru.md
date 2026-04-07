@@ -14,8 +14,11 @@ smart-commit setup
 # Генерация коммита
 smart-commit
 
-# Умный деплой
-smart-commit deploy-smart
+# Умный деплой (smart-режим по умолчанию)
+smart-commit deploy
+
+# Полный деплой всех команд
+smart-commit deploy --full
 ```
 
 ## ✨ Основные возможности
@@ -23,8 +26,9 @@ smart-commit deploy-smart
 - **🤖 ИИ-генерация коммитов** - автоматическое создание осмысленных сообщений коммитов
 - **📋 Conventional Commits** - поддержка стандарта conventional commits
 - **🌍 Многоязычность** - генерация коммитов на русском и английском языках
-- **🔧 Умный деплой** - анализ изменений и выполнение только необходимых команд
-- **⚡ Быстрый деплой** - полный деплой всех команд
+- **🧠 Умный деплой** - анализ git diff и выполнение только необходимых команд (режим по умолчанию)
+- **⚡ Полный деплой** - все команды из конфигурации через `deploy --full`
+- **📦 Локальная сборка фронта** - `npm run build` + `scp`/`rsync` через `localCommands` до SSH
 - **🎯 Анализ проекта** - автоматическое определение типа проекта и настройка
 
 ## 📚 Документация
@@ -42,8 +46,9 @@ smart-commit deploy-smart
 | Команда | Описание |
 |---------|----------|
 | `smart-commit` | Генерация и создание коммита |
-| `smart-commit deploy-smart` | Умный деплой (только нужные команды) |
-| `smart-commit deploy` | Полный деплой всех команд |
+| `smart-commit deploy` | Умный деплой (git diff анализ, только нужные команды) |
+| `smart-commit deploy --full` | Полный деплой всех команд из конфигурации |
+| `smart-commit deploy-smart` | ⚠️ Устарело — алиас для `deploy` |
 | `smart-commit setup` | Первоначальная настройка |
 | `smart-commit generate-config` | Генерация конфигурации проекта |
 | `smart-commit config` | Управление конфигурацией |
@@ -60,6 +65,8 @@ smart-commit deploy-smart
 ## 🎯 Умный деплой в действии
 
 ```bash
+$ smart-commit deploy
+
 🔍 Analyzing changes for smart deployment...
 
 📊 Analysis Results:
@@ -67,15 +74,28 @@ smart-commit deploy-smart
   • Frontend files changed (resources/js/components/Button.vue)
   • NPM dependencies changed (package.json)
 
-⚠️  Smart deployment will run N step(s) (local first, then remote):
+⚠️  Smart deployment will run 4 step(s) (local first, then remote):
   Local (this machine):
     1. npm run build
+    2. rsync -az --delete public/build/ deploy@203.0.113.10:/var/www/example-app/public/build/
   Remote (SSH):
     1. git pull origin main
     2. npm install
-    3. npm run build
 
 Continue? [y/N]
+```
+
+Пример конфигурации `localCommands` для сборки фронтенда и загрузки на сервер:
+
+```json
+{
+  "serverCommands": {
+    "localCommands": [
+      "npm run build",
+      "scp -r public/build deploy@203.0.113.10:/var/www/example-app/public/build"
+    ]
+  }
+}
 ```
 
 ### Поведение деплоя (`serverCommands` в `.smart-commit.json`)

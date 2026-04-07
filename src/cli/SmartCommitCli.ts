@@ -290,6 +290,18 @@ export class SmartCommitCli {
   }
 
   /**
+   * Unified deploy entry point.
+   *   mode = 'smart' → analyse git diff, run only necessary remote commands (default).
+   *   mode = 'full'  → run all categories from commands.* (legacy behaviour).
+   */
+  public async deploy(mode: 'smart' | 'full' = 'smart'): Promise<void> {
+    if (mode === 'full') {
+      return this.deployServer();
+    }
+    return this.deploySmart();
+  }
+
+  /**
    * Execute smart server commands based on changes
    */
   public async deploySmart(): Promise<void> {

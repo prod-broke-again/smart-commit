@@ -1,69 +1,115 @@
-# Обычный деплой (deploy)
+# Деплой (deploy)
 
-## 🚀 Что такое обычный деплой?
+## 🧠 Умный деплой по умолчанию
 
-Обычный деплой выполняет все команды из конфигурации подряд, независимо от того, какие изменения были внесены. Это полезно для полного обновления проекта или когда нужно убедиться, что все команды выполнены.
+Начиная с текущей версии команда `deploy` работает в **smart-режиме** по умолчанию: анализирует изменённые файлы последнего коммита и запускает только те удалённые команды, которые действительно нужны.
+
+Для полного запуска всех команд используйте флаг `--full`.
 
 ## 🚀 Использование
 
 ```bash
+# Smart-режим (по умолчанию): только нужные команды на основе git diff
 smart-commit deploy
+
+# Full-режим: все категории команд (git / frontend / backend / database / system)
+smart-commit deploy --full
 ```
 
-## ⚠️ Предупреждение
+## 🔍 Как работает smart-режим
 
-Команда покажет предупреждение: сначала **локальные** команды (если заданы в `localCommands`), затем **удалённые** по SSH:
+1. **Анализ изменений** — система смотрит на `git diff HEAD~1 HEAD` и определяет, какие файлы изменились.
+2. **Определение действий** — на основе типов файлов выбираются только нужные remote-команды.
+3. **Подтверждение** — выводятся локальные команды (`localCommands`, если есть) и список remote-команд.
+4. **Выполнение** — сначала `localCommands` на вашей машине (например, `npm run build`, `scp …`), затем SSH. При ошибке — **fail-fast**.
+
+## ⚙️ Локальная сборка и передача фронтенда
+
+Чтобы собирать фронтенд локально и отправлять артефакты на сервер, используйте поле `localCommands` в `.smart-commit.json`:
+
+```json
+{
+  "serverCommands": {
+    "localCommands": [
+      "npm run build",
+      "scp -r public/build deploy@203.0.113.10:/var/www/example-app/public/build"
+    ]
+  }
+}
+```
+
+Или через rsync (рекомендуется для больших объёмов):
+
+```json
+{
+  "serverCommands": {
+    "localCommands": [
+      "npm run build",
+      "rsync -az --delete public/build/ deploy@203.0.113.10:/var/www/example-app/public/build/"
+    ]
+  }
+}
+```
+
+> `localCommands` выполняются **до** SSH-подключения. Ошибка любой локальной команды останавливает процесс — сервер не затрагивается.
+
+## ⚠️ Full-режим: порядок выполнения
+
+При запуске `deploy --full` сначала выполняются `localCommands` (если заданы), затем по SSH — все секции в порядке: `git` → `frontend` → `backend` → `database` → `docker` → `system`.
 
 ```bash
 ⚠️  This will run local commands (if any), then remote commands over SSH:
-Server: root@211.211.211.211
+Server: deploy@203.0.113.10
 
 Commands to be executed:
 Local (this machine):
   1. [local] npm run build
+  2. [local] rsync -az --delete public/build/ deploy@203.0.113.10:/var/www/example-app/public/build/
 Remote (SSH):
   1. [git] git pull origin main
-  2. [frontend] npm i
-  3. [frontend] npm run build
+  2. [backend] composer install --no-dev --optimize-autoloader
+  3. [backend] php artisan optimize:clear
   ...
 
 Continue? [y/N]
 ```
 
-## 🔄 Порядок выполнения и ошибки
+## 📊 Примеры smart-анализа
 
-1. **Локально** — команды из `localCommands` (рабочий каталог — корень проекта). Ошибка → деплой останавливается, SSH не вызывается.
-2. **По SSH** — команды из секций `commands` по категориям. Ошибка любой команды → **fail-fast**, дальнейшие удалённые команды не выполняются.
-3. **Таймаут** — каждая удалённая команда ограничена `server.commandTimeoutSeconds` (по умолчанию 300 с).
+### Только фронтенд изменился
 
-Подробнее: [Конфигурация](configuration.md) (раздел про `localCommands` и таймауты).
+```bash
+📊 Analysis Results:
+  • Frontend files changed (resources/js/components/Button.vue)
 
-## 📋 Категории команд
+⚠️  Smart deployment will run 3 step(s):
+  Local (this machine):
+    1. npm run build
+    2. rsync -az --delete public/build/ deploy@203.0.113.10:/var/www/example-app/public/build/
+  Remote (SSH):
+    1. git pull origin main
+    2. npm run build
+```
 
-### Git команды
-- `git pull origin main` - обновление кода с репозитория
+### Только backend (PHP)
 
-### Frontend команды
-- `npm install` - установка зависимостей
-- `npm run build` - сборка фронтенда
+```bash
+📊 Analysis Results:
+  • Laravel configuration changed (config/app.php)
 
-### Backend команды
-- `composer install --no-dev --optimize-autoloader` - установка PHP зависимостей
-- `php artisan optimize:clear` - очистка кэша Laravel
+⚠️  Smart deployment will run 2 step(s):
+  Remote (SSH):
+    1. git pull origin main
+    2. php artisan optimize:clear
+```
 
-### Database команды
-- `php artisan migrate --force` - выполнение миграций
+### Нет изменений
 
-### System команды
-- `sudo apt-get update -y` - обновление пакетов
-- `sudo systemctl restart php8.3-fpm` - перезапуск PHP-FPM
-- `sudo systemctl restart nginx` - перезапуск Nginx
+```bash
+✅ No deployment needed - no changes detected!
+```
 
-## ⚙️ Настройка
-
-### Конфигурация сервера
-
-Создайте файл `.smart-commit.json` в корне проекта:
+## ⚙️ Полная конфигурация
 
 ```json
 {
@@ -71,6 +117,10 @@ Continue? [y/N]
     "enabled": true,
     "autoExecute": false,
     "projectPath": "/var/www/your-project",
+    "localCommands": [
+      "npm run build",
+      "scp -r public/build deploy@your-server.com:/var/www/your-project/public/build"
+    ],
     "server": {
       "host": "your-server.com",
       "user": "deploy",
@@ -78,121 +128,31 @@ Continue? [y/N]
       "keyPath": "~/.ssh/id_rsa",
       "commandTimeoutSeconds": 300
     },
-    "localCommands": [],
     "commands": {
       "git": ["git pull origin main"],
       "frontend": ["npm install", "npm run build"],
       "backend": ["composer install --no-dev --optimize-autoloader", "php artisan optimize:clear"],
       "database": ["php artisan migrate --force"],
       "docker": [],
-      "system": ["sudo apt-get update -y", "sudo systemctl restart php8.3-fpm", "sudo systemctl restart nginx"]
+      "system": ["sudo systemctl reload php8.3-fpm", "sudo systemctl reload nginx"]
     },
-    "whitelist": ["npm", "yarn", "composer", "php artisan", "sudo systemctl", "sudo apt-get"]
+    "whitelist": ["npm", "yarn", "composer", "php artisan", "sudo systemctl"]
   }
 }
 ```
-
-### Автоматическое выполнение
-
-Если вы хотите выполнять команды без подтверждения:
-
-```json
-{
-  "serverCommands": {
-    "autoExecute": true
-  }
-}
-```
-
-⚠️ **Внимание!** Используйте `autoExecute: true` только в CI/CD системах или когда вы полностью уверены в командах.
 
 ## 🔒 Безопасность
 
-### SSH ключи
-
-Рекомендуется использовать SSH ключи:
-
 ```bash
-# Генерация SSH ключа
+# Рекомендуется: SSH-ключ
 ssh-keygen -t rsa -b 4096 -C "your-email@example.com"
-
-# Копирование ключа на сервер
-ssh-copy-id user@server.com
+ssh-copy-id deploy@your-server.com
 ```
 
-### Whitelist команд
-
-Всегда указывайте `whitelist` с разрешенными командами:
+Для CI/CD без подтверждений:
 
 ```json
-{
-  "whitelist": [
-    "npm",
-    "yarn",
-    "composer", 
-    "php artisan",
-    "git",
-    "sudo systemctl",
-    "sudo apt-get"
-  ]
-}
-```
-
-## 📊 Примеры конфигураций
-
-### Laravel проект
-
-```json
-{
-  "serverCommands": {
-    "enabled": true,
-    "autoExecute": false,
-    "projectPath": "/var/www/laravel-app",
-    "server": {
-      "host": "192.168.1.100",
-      "user": "deploy",
-      "port": 22,
-      "keyPath": "~/.ssh/id_rsa"
-    },
-    "commands": {
-      "git": ["git pull origin main"],
-      "frontend": ["npm install", "npm run build"],
-      "backend": [
-        "composer install --no-dev --optimize-autoloader",
-        "php artisan config:cache",
-        "php artisan route:cache",
-        "php artisan view:cache"
-      ],
-      "database": ["php artisan migrate --force"],
-      "system": ["sudo systemctl restart php8.3-fpm", "sudo systemctl restart nginx"]
-    },
-    "whitelist": ["npm", "composer", "php artisan", "sudo systemctl"]
-  }
-}
-```
-
-### Node.js проект
-
-```json
-{
-  "serverCommands": {
-    "enabled": true,
-    "autoExecute": false,
-    "projectPath": "/var/www/node-app",
-    "server": {
-      "host": "node-server.com",
-      "user": "deploy",
-      "port": 22
-    },
-    "commands": {
-      "git": ["git pull origin main"],
-      "frontend": ["npm install", "npm run build"],
-      "backend": ["npm install --production"],
-      "system": ["sudo systemctl restart node-app"]
-    },
-    "whitelist": ["npm", "sudo systemctl"]
-  }
-}
+{ "serverCommands": { "autoExecute": true } }
 ```
 
 ## 🆘 Решение проблем
@@ -203,49 +163,19 @@ ssh-copy-id user@server.com
 smart-commit generate-config
 ```
 
-### Ошибка "Server configuration is missing"
+### rsync не найден
 
-Проверьте файл `.smart-commit.json` и убедитесь, что указаны все обязательные параметры.
+Убедитесь, что `rsync` установлен и доступен в `PATH`. На Windows можно использовать WSL, Git Bash или `scp` вместо `rsync`.
 
-### Ошибка SSH подключения
-
-```bash
-# Проверьте подключение
-ssh user@server.com
-
-# Проверьте SSH ключ
-ssh-add -l
-```
-
-### Ошибка "Command not in whitelist"
-
-Добавьте команду в `whitelist` в конфигурации:
-
-```json
-{
-  "whitelist": ["npm", "composer", "php artisan", "sudo systemctl", "your-command"]
-}
-```
-
-### Ошибка "Permission denied"
-
-Убедитесь, что пользователь имеет права на выполнение команд:
+### Ошибка SSH
 
 ```bash
-# Проверьте права пользователя
-ssh user@server.com "sudo -l"
+ssh deploy@your-server.com  # проверить подключение
+ssh-add -l                  # проверить загруженные ключи
 ```
-
-## 🎯 Когда использовать обычный деплой?
-
-- **Полное обновление** - когда нужно обновить все компоненты
-- **Первоначальный деплой** - при первом развертывании проекта
-- **Критические обновления** - когда нужно убедиться, что все команды выполнены
-- **CI/CD системы** - в автоматизированных процессах
 
 ## 🔗 Полезные ссылки
 
 - [Основные команды](commands.md)
-- [Умный деплой](smart-deploy.md)
 - [Конфигурация](configuration.md)
 - [Примеры использования](examples.md)
