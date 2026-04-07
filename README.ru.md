@@ -130,6 +130,6 @@ MIT License - см. [LICENSE](LICENSE) для деталей.
 
 ---
 
-**Версия:** 1.0.11  
+**Версия:** 1.1.0  
 **Автор:** [Eugene (prod-broke-again)](https://github.com/prod-broke-again)
 
