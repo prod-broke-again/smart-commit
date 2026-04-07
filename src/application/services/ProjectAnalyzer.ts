@@ -144,7 +144,12 @@ export class ProjectAnalyzer {
 
       if (projectType && projectType !== 'unknown') {
         actualProjectType = projectType;
-        // For known types, we might not need framework info, but let's keep it simple
+        // For PHP projects we always need the framework to apply Laravel-specific rules.
+        // For other known types a lightweight path is sufficient.
+        if (actualProjectType === 'php') {
+          const projectInfo = await this.analyzeProject(projectPath);
+          projectFramework = projectInfo.framework;
+        }
       } else {
         // Fallback: analyze project to determine type
         const projectInfo = await this.analyzeProject(projectPath);
