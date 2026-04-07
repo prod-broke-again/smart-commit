@@ -31,6 +31,10 @@ export interface ServerCommandsConfig {
   projectPath?: string;
   /** Run on the developer machine before SSH (e.g. npm run build, rsync). */
   localCommands?: string[];
+  /**
+   * When true, smart deploy never adds `npm run build` on the server (e.g. you build locally and upload assets).
+   */
+  skipRemoteNpmBuild?: boolean;
   server?: {
     host: string;
     user: string;
@@ -253,8 +257,13 @@ export class ProjectAnalyzer {
   /**
    * Generate smart deployment commands based on analysis
    */
-  public generateSmartDeployCommands(analysis: SmartDeployAnalysis): string[] {
+  public generateSmartDeployCommands(
+    analysis: SmartDeployAnalysis,
+    options?: { skipRemoteNpmBuild?: boolean }
+  ): string[] {
     const commands: string[] = [];
+    const skipRemoteNpmBuild = options?.skipRemoteNpmBuild === true;
+    const runRemoteNpmBuild = analysis.needsNpmBuild && !skipRemoteNpmBuild;
 
     // Always pull latest changes
     if (analysis.needsGitPull) {
@@ -270,7 +279,7 @@ export class ProjectAnalyzer {
     if (analysis.needsNpmInstall) {
       commands.push('npm install --production');
     }
-    if (analysis.needsNpmBuild) {
+    if (runRemoteNpmBuild) {
       commands.push('npm run build');
     }
 
@@ -282,8 +291,8 @@ export class ProjectAnalyzer {
       commands.push('php artisan migrate --force');
     }
 
-    // PM2 restart for Node.js projects
-    if (analysis.needsNpmBuild || analysis.needsNpmInstall) {
+    // PM2 restart when npm install or when we actually run a remote build
+    if (analysis.needsNpmInstall || runRemoteNpmBuild) {
       commands.push('pm2 restart 0');
     }
 

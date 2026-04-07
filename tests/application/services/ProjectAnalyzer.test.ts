@@ -173,5 +173,52 @@ describe('ProjectAnalyzer.analyzeChangesForSmartDeploy', () => {
 
       expect(commands).not.toContain('npm run build');
     });
+
+    it('does NOT include npm run build or pm2 when needsNpmBuild but skipRemoteNpmBuild is true', () => {
+      const { ProjectAnalyzer: PA } = require('../../../src/application/services/ProjectAnalyzer');
+      const analyzer = new PA({} as IAiAssistant);
+
+      const commands = analyzer.generateSmartDeployCommands(
+        {
+          needsGitPull: true,
+          needsComposerInstall: false,
+          needsComposerUpdate: false,
+          needsNpmInstall: false,
+          needsNpmBuild: true,
+          needsLaravelOptimize: false,
+          needsLaravelMigrate: false,
+          needsSystemRestart: false,
+          reasons: [],
+        },
+        { skipRemoteNpmBuild: true }
+      );
+
+      expect(commands).not.toContain('npm run build');
+      expect(commands).not.toContain('pm2 restart 0');
+    });
+
+    it('still runs npm install and pm2 when skipRemoteNpmBuild but needsNpmInstall', () => {
+      const { ProjectAnalyzer: PA } = require('../../../src/application/services/ProjectAnalyzer');
+      const analyzer = new PA({} as IAiAssistant);
+
+      const commands = analyzer.generateSmartDeployCommands(
+        {
+          needsGitPull: true,
+          needsComposerInstall: false,
+          needsComposerUpdate: false,
+          needsNpmInstall: true,
+          needsNpmBuild: true,
+          needsLaravelOptimize: false,
+          needsLaravelMigrate: false,
+          needsSystemRestart: false,
+          reasons: [],
+        },
+        { skipRemoteNpmBuild: true }
+      );
+
+      expect(commands).not.toContain('npm run build');
+      expect(commands).toContain('npm install --production');
+      expect(commands).toContain('pm2 restart 0');
+    });
   });
 });

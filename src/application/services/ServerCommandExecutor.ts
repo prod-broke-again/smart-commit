@@ -54,6 +54,7 @@ export class ServerCommandExecutor {
 
   /**
    * If localCommands use rsync, ensure rsync exists in PATH before starting deploy.
+   * On Windows, commands may use `wsl rsync ...`; in that case only WSL's rsync is checked.
    */
   public async validateLocalDeployPrerequisites(localCommands?: string[]): Promise<string[]> {
     const cmds = localCommands ?? [];
@@ -61,14 +62,43 @@ export class ServerCommandExecutor {
     if (!needsRsync) {
       return [];
     }
+
+    const usesWslRsync = cmds.some(
+      c => /^\s*wsl\s+/i.test(c) && /\brsync\b/i.test(c)
+    );
+
+    if (usesWslRsync) {
+      try {
+        await execAsync('wsl rsync --version', { timeout: 8000 });
+        return [];
+      } catch {
+        return [
+          'localCommands use `wsl rsync`, but rsync was not found in WSL. In WSL run: sudo apt install rsync (Debian/Ubuntu) or equivalent, then retry.'
+        ];
+      }
+    }
+
     try {
       await execAsync('rsync --version', { timeout: 8000 });
+      return [];
     } catch {
+      if (process.platform === 'win32') {
+        try {
+          await execAsync('wsl rsync --version', { timeout: 8000 });
+          return [
+            'localCommands reference rsync, but `rsync` is not in PATH on Windows. Options: (1) Change the line to `wsl rsync ...` if you use WSL (fix paths if needed, e.g. /mnt/c/...). (2) Install rsync: `choco install rsync` or `scoop install rsync`, then reopen the terminal so PATH updates.'
+          ];
+        } catch {
+          /* fall through */
+        }
+        return [
+          'localCommands reference rsync, but rsync was not found in PATH. Install rsync (e.g. `choco install rsync` or `scoop install rsync`), use Git Bash with rsync, or use `wsl rsync ...` after installing rsync inside WSL.'
+        ];
+      }
       return [
         'localCommands reference rsync, but rsync was not found in PATH. Install rsync or adjust localCommands.'
       ];
     }
-    return [];
   }
 
   /**

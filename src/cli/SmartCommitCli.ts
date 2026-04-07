@@ -351,14 +351,19 @@ export class SmartCommitCli {
 
       const analysis = await projectAnalyzer.analyzeChangesForSmartDeploy(projectPath, projectType);
 
+      const skipRemoteNpmBuild = serverConfig.skipRemoteNpmBuild === true;
+
       // Show analysis results
       console.log(chalk.green('\n📊 Analysis Results:'));
       analysis.reasons.forEach(reason => {
         console.log(chalk.gray(`  • ${reason}`));
       });
+      if (skipRemoteNpmBuild && analysis.needsNpmBuild) {
+        console.log(chalk.gray('  • Remote npm run build skipped (skipRemoteNpmBuild in config)'));
+      }
 
       // Generate smart commands
-      const smartCommands = projectAnalyzer.generateSmartDeployCommands(analysis);
+      const smartCommands = projectAnalyzer.generateSmartDeployCommands(analysis, { skipRemoteNpmBuild });
 
       if (smartCommands.length === 0) {
         console.log(chalk.yellow('✅ No deployment needed - no changes detected!'));
