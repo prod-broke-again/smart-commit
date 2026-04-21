@@ -27,7 +27,7 @@ export class CommitGenerator implements ICommitGenerator {
 
     const model = options.model || AiModel.GPT_3_5_TURBO;
     const language = options.language || 'en';
-    const maxLength = options.maxLength || 72;
+    const maxLength = options.maxLength || 96;
 
     // Analyze changes to determine commit type
     const commitType = CommitType.determineFromChanges(changes);
@@ -51,12 +51,14 @@ export class CommitGenerator implements ICommitGenerator {
       maxTokens = isFullMode ? 500 : 100; // GPT-4 and other models
     }
 
-    const description = await this.aiAssistant.generateText(prompt, {
+    const rawResponse = await this.aiAssistant.generateText(prompt, {
       model,
       maxTokens,
       temperature: 0.7,
       customInstructions: options.customInstructions ?? undefined,
     });
+
+    const description = this.extractDescriptionFromAiResponse(rawResponse);
 
     // Clean and truncate description (allow longer descriptions for full mode)
     const descriptionMaxLength = options.analysisMode === 'full' ? Math.max(maxLength, 1000) : maxLength;
@@ -171,20 +173,14 @@ Requirements:
 - Start with imperative mood in the main description
 - Keep main description under 70 characters, but be detailed in bullet points
 - Use format like: "- 🔐 Added authentication entities: User, AuthToken, LoginRequest"
-- IMPORTANT: Start your response immediately with the commit message. Do NOT add greetings, introductions, or explanations before the commit message.
-- Do NOT write phrases like "Здравствуйте", "Я готов помочь", "Вот предложенное сообщение", etc.
-- Output ONLY the commit message in the format below, nothing else.
+- Return ONLY valid JSON object. No markdown, no code fences, no extra text.
+- JSON schema:
+  {"description":"string"}
 ${customInstructions ? `\nAdditional instructions: ${customInstructions}` : ''}
 
-Example format:
-feat: implement user authentication system 🔐
-- 🔐 Added authentication entities: User, AuthToken, LoginRequest
-- 🛡️ Implemented security services: PasswordHasher, TokenValidator
-- 🚀 Added auth endpoints: login, register, logout
-
-Main description:`;
+Description JSON:`;
     } else {
-      return `Generate a concise commit message description for ${commitType.value} type changes.
+      return `Generate a conventional commit description for ${commitType.value} type changes.
 
 ${changesDescription}
 
@@ -192,16 +188,47 @@ Requirements:
 - Write in ${language}
 - Be specific and actionable
 - Start with imperative mood (Add, Fix, Update, Remove, etc.)
-- Keep it under 50 characters when possible
-- Focus on what changed and why, not how
+- Mention 2-3 most important changed areas (modules, features, or concrete files/components)
+- Include the main intent/impact in one line (what changed and why it matters)
+- Prefer 60-96 characters when useful; do not over-shorten to vague wording
 - Do not mention areas of the project that remained unchanged (avoid phrases like "backend not affected")
-- IMPORTANT: Start your response immediately with the commit message. Do NOT add greetings, introductions, or explanations before the commit message.
-- Do NOT write phrases like "Здравствуйте", "Я готов помочь", "Вот предложенное сообщение", etc.
-- Output ONLY the commit message description, nothing else.
+- Return ONLY valid JSON object. No markdown, no code fences, no extra text.
+- JSON schema:
+  {"description":"string"}
 ${customInstructions ? `\nAdditional instructions: ${customInstructions}` : ''}
 
-Description:`;
+Description JSON:`;
     }
+  }
+
+  private extractDescriptionFromAiResponse(response: string): string {
+    const trimmed = response.trim();
+    const jsonCandidate = this.extractJsonObject(trimmed);
+
+    if (jsonCandidate) {
+      try {
+        const parsed = JSON.parse(jsonCandidate) as { description?: unknown };
+        if (typeof parsed.description === 'string' && parsed.description.trim().length > 0) {
+          return parsed.description.trim();
+        }
+      } catch {
+        // Fallback to legacy plain-text parsing below
+      }
+    }
+
+    // Legacy plain-text fallback for providers/models that still ignore JSON schema
+    return trimmed;
+  }
+
+  private extractJsonObject(text: string): string | null {
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+      return null;
+    }
+
+    return text.slice(firstBrace, lastBrace + 1);
   }
 
   private analyzeCodeChanges(diff: string, changes: readonly GitChange[]): string {
